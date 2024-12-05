@@ -114,6 +114,10 @@ func handleConnectionWithRead(conn net.Conn, store *storage.RedisClone, clientAd
 
 				// Send the response back to the client
 				conn.Write([]byte(response + "\r\n"))
+				if strings.ToUpper(parts[0]) == "QUIT" {
+					log.Printf("Client %s sent QUIT. Closing connection.", clientAddr)
+					return // Break out of the loop to close the connection
+				}
 			}
 			// Clear the input buffer after processing the command
 			input = nil

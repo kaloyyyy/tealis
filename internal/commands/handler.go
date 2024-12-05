@@ -52,6 +52,17 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return ":1"
 		}
 		return ":0"
+	case "EXISTS":
+		if len(parts) < 2 {
+			return "-ERR EXISTS requires a key"
+		}
+		key := parts[1]
+		if store.Exists(key) {
+			return ":1"
+		}
+		return ":0"
+	case "QUIT":
+		return "+OK"
 	default:
 		return "-ERR Unknown command"
 	}

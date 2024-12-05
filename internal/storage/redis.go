@@ -58,6 +58,14 @@ func (r *RedisClone) Del(key string) bool {
 	return false
 }
 
+// Exists checks if a key exists in the store.
+func (r *RedisClone) Exists(key string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, exists := r.store[key]
+	return exists
+}
+
 func (r *RedisClone) StartCleanup() {
 	go func() {
 		for {
