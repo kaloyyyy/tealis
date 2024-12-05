@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
@@ -15,9 +16,12 @@ import (
 func main() {
 	// Create the Redis clone instance
 	store := storage.NewRedisClone()
+	// Create a context for cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// Start background cleanup task for expired keys
-	store.StartCleanup()
+	store.StartCleanup(ctx)
 
 	// Set up a listener on port 6379
 	listener, err := net.Listen("tcp", ":6379")

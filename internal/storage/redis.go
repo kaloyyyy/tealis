@@ -1,6 +1,10 @@
 package storage
 
 import (
+	"context"
+	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -66,20 +70,128 @@ func (r *RedisClone) Exists(key string) bool {
 	return exists
 }
 
-func (r *RedisClone) StartCleanup() {
+func (r *RedisClone) StartCleanup(ctx context.Context) {
 	go func() {
 		for {
-			time.Sleep(time.Second) // Run cleanup every second
-			now := time.Now()
-
-			r.mu.Lock()
-			for key, expiry := range r.expiries {
-				if now.After(expiry) {
-					delete(r.store, key)
-					delete(r.expiries, key)
+			select {
+			case <-ctx.Done():
+				// Stop the cleanup goroutine if the context is canceled
+				return
+			case <-time.After(time.Second):
+				// Run cleanup every second
+				now := time.Now()
+				r.mu.Lock()
+				for key, expiry := range r.expiries {
+					if now.After(expiry) {
+						delete(r.store, key)
+						delete(r.expiries, key)
+					}
 				}
+				r.mu.Unlock()
 			}
-			r.mu.Unlock()
 		}
 	}()
+}
+
+func (r *RedisClone) Append(key, value string) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if current, exists := r.store[key]; exists {
+		r.store[key] = current + value
+	} else {
+		r.store[key] = value
+	}
+	return len(r.store[key])
+}
+
+func (r *RedisClone) StrLen(key string) int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if value, exists := r.store[key]; exists {
+		return len(value)
+	}
+	return 0
+}
+func (r *RedisClone) IncrBy(key string, increment int) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	current, exists := r.store[key]
+	if !exists {
+		r.store[key] = strconv.Itoa(increment) // Create the key with the increment if not exists
+		return increment, nil
+	}
+
+	currentInt, err := strconv.Atoi(current)
+	if err != nil {
+		return 0, fmt.Errorf("value is not an integer")
+	}
+
+	newValue := currentInt + increment
+	r.store[key] = strconv.Itoa(newValue)
+	return newValue, nil
+}
+func (r *RedisClone) GetRange(key string, start, end int) string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// Get the value of the key
+	value, exists := r.store[key]
+	if !exists {
+		return ""
+	}
+
+	// Handle negative indices
+	if start < 0 {
+		start = len(value) + start
+	}
+	if end < 0 {
+		end = len(value) + end
+	}
+
+	// Ensure start and end are within the bounds of the string
+	if start < 0 {
+		start = 0
+	}
+	if start >= len(value) {
+		return ""
+	}
+
+	if end >= len(value) {
+		end = len(value) - 1
+	}
+
+	// Return the substring
+	if start > end {
+		return ""
+	}
+
+	return value[start : end+1]
+}
+
+func (r *RedisClone) SetRange(key string, offset int, value string) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Get the current value for the key, or create an empty string if not found
+	currentValue, exists := r.store[key]
+	if !exists {
+		currentValue = ""
+	}
+
+	// If the offset is larger than the current length, pad the string with null bytes
+	if offset > len(currentValue) {
+		currentValue = currentValue + strings.Repeat(" ", offset-len(currentValue)) // Add spaces only up to the offset
+	}
+
+	// Update the string starting from the offset
+	newValue := currentValue[:offset] + value
+
+	// Set the new value in the store
+	r.store[key] = newValue
+
+	// Return the length of the new string
+	return len(newValue)
 }
