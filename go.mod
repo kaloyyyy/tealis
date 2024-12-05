@@ -1,3 +1,3 @@
-module awesomeProject
+module tealis
 
 go 1.23

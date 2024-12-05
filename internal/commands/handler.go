@@ -3,10 +3,10 @@
 package commands
 
 import (
-	"awesomeProject/internal/storage"
 	"log"
 	"strconv"
 	"strings"
+	"tealis/internal/storage"
 	"time"
 )
 

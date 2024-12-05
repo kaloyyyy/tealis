@@ -1,14 +1,15 @@
 package main
 
 import (
-	"awesomeProject/internal/commands"
-	"awesomeProject/internal/storage"
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"tealis/internal/commands"
+	"tealis/internal/protocol"
+	"tealis/internal/storage"
 )
 
 func main() {
@@ -105,7 +106,8 @@ func handleConnectionWithRead(conn net.Conn, store *storage.RedisClone, clientAd
 			log.Printf("Received command from %s: %s", clientAddr, line)
 
 			// Parse the command and process it
-			parts := parseCommand(line)
+			parts := protocol.ParseCommand(line)
+
 			if len(parts) > 0 {
 				// Process the command and get the response
 				response := commands.ProcessCommand(parts, store)
@@ -113,16 +115,10 @@ func handleConnectionWithRead(conn net.Conn, store *storage.RedisClone, clientAd
 				// Send the response back to the client
 				conn.Write([]byte(response + "\r\n"))
 			}
-
 			// Clear the input buffer after processing the command
 			input = nil
 		}
 	}
-}
-
-func parseCommand(input string) []string {
-	// Simple command parsing (split by spaces)
-	return strings.Fields(input)
 }
 
 func cleanBytes(data []byte) []byte {
