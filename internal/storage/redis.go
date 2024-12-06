@@ -2,7 +2,9 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,13 +13,13 @@ import (
 
 type RedisClone struct {
 	mu       sync.RWMutex
-	store    map[string]string
+	Store    map[string]string
 	expiries map[string]time.Time
 }
 
 func NewRedisClone() *RedisClone {
 	return &RedisClone{
-		store:    make(map[string]string),
+		Store:    make(map[string]string),
 		expiries: make(map[string]time.Time),
 	}
 }
@@ -26,7 +28,7 @@ func (r *RedisClone) Set(key, value string, ttl time.Duration) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.store[key] = value
+	r.Store[key] = value
 	if ttl > 0 {
 		r.expiries[key] = time.Now().Add(ttl)
 	} else {
@@ -40,13 +42,13 @@ func (r *RedisClone) Get(key string) (string, bool) {
 
 	if expiry, exists := r.expiries[key]; exists && time.Now().After(expiry) {
 		r.mu.Lock()
-		delete(r.store, key)
+		delete(r.Store, key)
 		delete(r.expiries, key)
 		r.mu.Unlock()
 		return "", false
 	}
 
-	value, exists := r.store[key]
+	value, exists := r.Store[key]
 	return value, exists
 }
 
@@ -54,8 +56,8 @@ func (r *RedisClone) Del(key string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.store[key]; exists {
-		delete(r.store, key)
+	if _, exists := r.Store[key]; exists {
+		delete(r.Store, key)
 		delete(r.expiries, key)
 		return true
 	}
@@ -66,7 +68,7 @@ func (r *RedisClone) Del(key string) bool {
 func (r *RedisClone) Exists(key string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	_, exists := r.store[key]
+	_, exists := r.Store[key]
 	return exists
 }
 
@@ -83,7 +85,7 @@ func (r *RedisClone) StartCleanup(ctx context.Context) {
 				r.mu.Lock()
 				for key, expiry := range r.expiries {
 					if now.After(expiry) {
-						delete(r.store, key)
+						delete(r.Store, key)
 						delete(r.expiries, key)
 					}
 				}
@@ -97,19 +99,19 @@ func (r *RedisClone) Append(key, value string) int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if current, exists := r.store[key]; exists {
-		r.store[key] = current + value
+	if current, exists := r.Store[key]; exists {
+		r.Store[key] = current + value
 	} else {
-		r.store[key] = value
+		r.Store[key] = value
 	}
-	return len(r.store[key])
+	return len(r.Store[key])
 }
 
 func (r *RedisClone) StrLen(key string) int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	if value, exists := r.store[key]; exists {
+	if value, exists := r.Store[key]; exists {
 		return len(value)
 	}
 	return 0
@@ -118,9 +120,9 @@ func (r *RedisClone) IncrBy(key string, increment int) (int, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	current, exists := r.store[key]
+	current, exists := r.Store[key]
 	if !exists {
-		r.store[key] = strconv.Itoa(increment) // Create the key with the increment if not exists
+		r.Store[key] = strconv.Itoa(increment) // Create the key with the increment if not exists
 		return increment, nil
 	}
 
@@ -130,7 +132,7 @@ func (r *RedisClone) IncrBy(key string, increment int) (int, error) {
 	}
 
 	newValue := currentInt + increment
-	r.store[key] = strconv.Itoa(newValue)
+	r.Store[key] = strconv.Itoa(newValue)
 	return newValue, nil
 }
 func (r *RedisClone) GetRange(key string, start, end int) string {
@@ -138,7 +140,7 @@ func (r *RedisClone) GetRange(key string, start, end int) string {
 	defer r.mu.RUnlock()
 
 	// Get the value of the key
-	value, exists := r.store[key]
+	value, exists := r.Store[key]
 	if !exists {
 		return ""
 	}
@@ -176,7 +178,7 @@ func (r *RedisClone) SetRange(key string, offset int, value string) int {
 	defer r.mu.Unlock()
 
 	// Get the current value for the key, or create an empty string if not found
-	currentValue, exists := r.store[key]
+	currentValue, exists := r.Store[key]
 	if !exists {
 		currentValue = ""
 	}
@@ -190,8 +192,245 @@ func (r *RedisClone) SetRange(key string, offset int, value string) int {
 	newValue := currentValue[:offset] + value
 
 	// Set the new value in the store
-	r.store[key] = newValue
+	r.Store[key] = newValue
 
 	// Return the length of the new string
 	return len(newValue)
+}
+
+func (r *RedisClone) Keys(pattern string) []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var matchedKeys []string
+
+	for key := range r.Store {
+		// Match all keys if pattern is "*"
+		if pattern == "*" || matchesPattern(key, pattern) {
+			matchedKeys = append(matchedKeys, key)
+		}
+	}
+	return matchedKeys
+}
+
+// Helper function to match a key against a pattern
+func matchesPattern(key, pattern string) bool {
+	// Use path.Match for glob-style pattern matching
+	matched, err := path.Match(pattern, key)
+	return err == nil && matched
+}
+
+func (r *RedisClone) JSONSet(key, path string, value interface{}) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Parse JSON if the key exists, or create a new map
+	var jsonData map[string]interface{}
+	if existing, ok := r.Store[key]; ok {
+		if err := json.Unmarshal([]byte(existing), &jsonData); err != nil {
+			return fmt.Errorf("invalid JSON data at key %s", key)
+		}
+	} else {
+		jsonData = make(map[string]interface{})
+	}
+
+	// Set the value at the specified path
+	if err := setJSONValue(jsonData, path, value); err != nil {
+		return err
+	}
+
+	// Serialize back to JSON and store
+	serialized, err := json.Marshal(jsonData)
+	if err != nil {
+		return fmt.Errorf("failed to serialize JSON: %v", err)
+	}
+	r.Store[key] = string(serialized)
+	return nil
+}
+
+func setJSONValue(data interface{}, path string, value interface{}) error {
+	if !strings.HasPrefix(path, "$.") {
+		return fmt.Errorf("invalid path: must start with $.")
+	}
+
+	segments := strings.Split(path[2:], ".")
+	current := data
+
+	for i, segment := range segments {
+		if i == len(segments)-1 { // Last segment
+			switch node := current.(type) {
+			case map[string]interface{}:
+				node[segment] = value
+				return nil
+			default:
+				return fmt.Errorf("cannot set value at path: %s", path)
+			}
+		}
+
+		switch node := current.(type) {
+		case map[string]interface{}:
+			next, exists := node[segment]
+			if !exists {
+				// Create a new nested object if it doesn't exist
+				newMap := make(map[string]interface{})
+				node[segment] = newMap
+				current = newMap
+			} else {
+				current = next
+			}
+		default:
+			return fmt.Errorf("invalid structure at path segment: %s", segment)
+		}
+	}
+
+	return nil
+}
+
+func getJSONValue(data interface{}, path string) (interface{}, error) {
+	if !strings.HasPrefix(path, "$.") {
+		return nil, fmt.Errorf("invalid path: must start with $.")
+	}
+
+	segments := strings.Split(path[2:], ".")
+	current := data
+
+	for _, segment := range segments {
+		switch node := current.(type) {
+		case map[string]interface{}:
+			next, exists := node[segment]
+			if !exists {
+				return nil, fmt.Errorf("path not found: %s", path)
+			}
+			current = next
+		case []interface{}:
+			index, err := strconv.Atoi(segment)
+			if err != nil || index < 0 || index >= len(node) {
+				return nil, fmt.Errorf("invalid array index at path segment: %s", segment)
+			}
+			current = node[index]
+		default:
+			return nil, fmt.Errorf("invalid structure at path segment: %s", segment)
+		}
+	}
+
+	return current, nil
+}
+func deleteJSONValue(data interface{}, path string) error {
+	if !strings.HasPrefix(path, "$.") {
+		return fmt.Errorf("invalid path: must start with $.")
+	}
+
+	segments := strings.Split(path[2:], ".")
+	current := data
+
+	for i, segment := range segments {
+		if i == len(segments)-1 { // Last segment
+			switch node := current.(type) {
+			case map[string]interface{}:
+				delete(node, segment)
+				return nil
+			default:
+				return fmt.Errorf("cannot delete value at path: %s", path)
+			}
+		}
+
+		switch node := current.(type) {
+		case map[string]interface{}:
+			next, exists := node[segment]
+			if !exists {
+				return fmt.Errorf("path not found: %s", path)
+			}
+			current = next
+		default:
+			return fmt.Errorf("invalid structure at path segment: %s", segment)
+		}
+	}
+
+	return nil
+}
+func appendJSONArray(data interface{}, path string, values []interface{}) error {
+	target, err := getJSONValue(data, path)
+	if err != nil {
+		return err
+	}
+
+	array, ok := target.([]interface{})
+	if !ok {
+		return fmt.Errorf("target at path %s is not an array", path)
+	}
+
+	array = append(array, values...)
+	// Set the updated array back
+	return setJSONValue(data, path, array)
+}
+func (r *RedisClone) JSONGet(key, path string) (interface{}, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	existing, ok := r.Store[key]
+	if !ok {
+		return nil, fmt.Errorf("key %s not found", key)
+	}
+
+	var jsonData interface{}
+	if err := json.Unmarshal([]byte(existing), &jsonData); err != nil {
+		return nil, fmt.Errorf("invalid JSON data at key %s", key)
+	}
+
+	// Get value at the specified path
+	return getJSONValue(jsonData, path)
+}
+func (r *RedisClone) JSONDel(key, path string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	existing, ok := r.Store[key]
+	if !ok {
+		return fmt.Errorf("key %s not found", key)
+	}
+
+	var jsonData map[string]interface{}
+	if err := json.Unmarshal([]byte(existing), &jsonData); err != nil {
+		return fmt.Errorf("invalid JSON data at key %s", key)
+	}
+
+	// Delete the value at the specified path
+	if err := deleteJSONValue(jsonData, path); err != nil {
+		return err
+	}
+
+	// Serialize back to JSON and update
+	serialized, err := json.Marshal(jsonData)
+	if err != nil {
+		return fmt.Errorf("failed to serialize JSON: %v", err)
+	}
+	r.Store[key] = string(serialized)
+	return nil
+}
+func (r *RedisClone) JSONArrAppend(key, path string, values ...interface{}) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	existing, ok := r.Store[key]
+	if !ok {
+		return fmt.Errorf("key %s not found", key)
+	}
+
+	var jsonData interface{}
+	if err := json.Unmarshal([]byte(existing), &jsonData); err != nil {
+		return fmt.Errorf("invalid JSON data at key %s", key)
+	}
+
+	// Append to array at the specified path
+	if err := appendJSONArray(jsonData, path, values); err != nil {
+		return err
+	}
+
+	// Serialize back to JSON and update
+	serialized, err := json.Marshal(jsonData)
+	if err != nil {
+		return fmt.Errorf("failed to serialize JSON: %v", err)
+	}
+	r.Store[key] = string(serialized)
+	return nil
 }

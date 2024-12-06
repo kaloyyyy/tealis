@@ -148,7 +148,28 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		}
 		newLength := store.SetRange(key, offset, value)
 		return ":" + strconv.Itoa(newLength)
+	case "KEYS":
+		if len(parts) < 2 {
+			return "-ERR KEYS requires a pattern"
+		}
+		pattern := parts[1]
+		keys := store.Keys(pattern)
+		if len(keys) == 0 {
+			return "(empty list or set)"
+		}
+		return formatArrayResponse(keys)
 	default:
 		return "-ERR Unknown command"
 	}
+}
+
+// Helper to format an array response for the KEYS command
+func formatArrayResponse(items []string) string {
+	var response strings.Builder
+	response.WriteString("*" + strconv.Itoa(len(items)) + "\r\n")
+	for _, item := range items {
+		response.WriteString("$" + strconv.Itoa(len(item)) + "\r\n")
+		response.WriteString(item + "\r\n")
+	}
+	return response.String()
 }

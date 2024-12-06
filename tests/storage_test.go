@@ -2,7 +2,9 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"github.com/stretchr/testify/assert"
+	"reflect"
 	_ "strconv"
 	_ "tealis/internal/commands"
 	_ "tealis/internal/protocol"
@@ -173,7 +175,7 @@ func TestSetRange(t *testing.T) {
 	store.Set("key2", "Hello     Redis", 0)
 	// Set range at a large offset, padding with null bytes
 	resultLen = store.SetRange("key2", 10, "Redis") // Expected: "Hello\x00\x00\x00Redis"
-	assert.Equal(t, 15, resultLen, "Expected length after SETRANGE to be 16")
+	assert.Equal(t, 15, resultLen, "Expected length after SETRANGE to be 15")
 	value, exists = store.Get("key2")
 	assert.True(t, exists, "Expected key to exist")
 	assert.Equal(t, "Hello     Redis", value, "Expected value to be 'Hello     Redis'")
@@ -182,8 +184,79 @@ func TestSetRange(t *testing.T) {
 	store.Set("key3", "Hello World", 0)
 	// Set range at index 6 to overwrite part of the string with "Gorld"
 	resultLen = store.SetRange("key3", 6, "Gorld") // Expected: "Hello Gorld"
-	assert.Equal(t, 11, resultLen, "Expected length after SETRANGE to be 12")
+	assert.Equal(t, 11, resultLen, "Expected length after SETRANGE to be 11")
 	value, exists = store.Get("key3")
 	assert.True(t, exists, "Expected key to exist")
 	assert.Equal(t, "Hello Gorld", value, "Expected value to be 'Hello Gorld'")
+}
+func TestKeys(t *testing.T) {
+	store := storage.NewRedisClone()
+
+	// Set keys
+	store.Set("key1", "value1", 0)
+	store.Set("key2", "value2", 0)
+	store.Set("anotherkey", "value3", 0)
+
+	// Test KEYS with *
+	keys := store.Keys("*")
+	if len(keys) != 3 {
+		t.Errorf("Expected 3 keys, got %d", len(keys))
+	}
+
+	// Test KEYS with specific pattern
+	keys = store.Keys("key*")
+	if len(keys) != 2 {
+		t.Errorf("Expected 2 keys for pattern 'key*', got %d", len(keys))
+	}
+	// Test KEYS with specific pattern
+	keys = store.Keys("*key")
+	if len(keys) != 1 {
+		t.Errorf("Expected 1 keys for pattern 'key*', got %d", len(keys))
+	}
+	// Test KEYS with no match
+	keys = store.Keys("nomatch*")
+	if len(keys) != 0 {
+		t.Errorf("Expected 0 keys for pattern 'nomatch*', got %d", len(keys))
+	}
+}
+
+func TestJSONSetAndGet(t *testing.T) {
+	r := storage.RedisClone{
+		Store: map[string]string{},
+	}
+
+	// JSON.SET
+	err := r.JSONSet("key1", "$.a.b", []interface{}{4, 5})
+	if err != nil {
+		t.Fatalf("JSONSet failed: %v", err)
+	}
+
+	// JSON.GET
+	value, err := r.JSONGet("key1", "$.a.b")
+	if err != nil {
+		t.Fatalf("JSONGet failed: %v", err)
+	}
+
+	// Convert []interface{} to []int for comparison
+	actual, err := interfaceSliceToIntSlice(value.([]interface{}))
+	if err != nil {
+		t.Fatalf("Conversion failed: %v", err)
+	}
+
+	expected := []int{4, 5}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Expected %v, got %v", expected, actual)
+	}
+}
+
+func interfaceSliceToIntSlice(input []interface{}) ([]int, error) {
+	result := make([]int, len(input))
+	for i, v := range input {
+		num, ok := v.(float64) // JSON numbers are unmarshaled as float64
+		if !ok {
+			return nil, fmt.Errorf("value at index %d is not a number", i)
+		}
+		result[i] = int(num)
+	}
+	return result, nil
 }
