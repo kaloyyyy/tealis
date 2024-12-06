@@ -3,6 +3,7 @@
 package commands
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -158,6 +159,60 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "(empty list or set)"
 		}
 		return formatArrayResponse(keys)
+
+		// JSON commands
+	case "JSON.SET":
+		if len(parts) < 4 {
+			return "-ERR JSON.SET requires key, path, and value"
+		}
+		key, path, value := parts[1], parts[2], parts[3]
+		fmt.Printf("")
+		fmt.Printf("handler set %s %s %s\n", key, path, value)
+		err := store.JSONSet(key, path, value)
+		if err != nil {
+			return "-ERR " + err.Error()
+		}
+		return "+OK"
+	case "JSON.GET":
+		if len(parts) < 3 {
+			return "-ERR JSON.GET requires key and path"
+		}
+		key, path := parts[1], parts[2]
+		value, err := store.JSONGet(key, path)
+		if err != nil {
+			return "-ERR " + err.Error()
+		}
+		// Handle value as string for JSON.GET
+		strValue, ok := value.(string)
+		if !ok {
+			return "-ERR JSON GET value is not a string"
+		}
+		return "$" + strconv.Itoa(len(strValue)) + "\r\n" + strValue
+	case "JSON.DEL":
+		if len(parts) < 3 {
+			return "-ERR JSON.DEL requires key and path"
+		}
+		key, path := parts[1], parts[2]
+		err := store.JSONDel(key, path)
+		if err != nil {
+			return "-ERR " + err.Error()
+		}
+		return ":1"
+	case "JSON.ARRAPPEND":
+		if len(parts) < 4 {
+			return "-ERR JSON.ARRAPPEND requires key, path, and value(s)"
+		}
+		key, path := parts[1], parts[2]
+		values := make([]interface{}, len(parts)-3)
+		for i, v := range parts[3:] {
+			values[i] = v
+		}
+		err := store.JSONArrAppend(key, path, values...)
+		if err != nil {
+			return "-ERR " + err.Error()
+		}
+		return ":1"
+
 	default:
 		return "-ERR Unknown command"
 	}

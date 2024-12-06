@@ -260,3 +260,31 @@ func interfaceSliceToIntSlice(input []interface{}) ([]int, error) {
 	}
 	return result, nil
 }
+
+func TestJSONGetWithFormatting(t *testing.T) {
+	store := map[string]interface{}{
+		"obj": []interface{}{
+			map[string]interface{}{
+				"name":      "Leonard Cohen",
+				"lastSeen":  1478476800,
+				"loggedOut": true,
+			},
+		},
+	}
+
+	args := []string{"obj", "INDENT", "\t", "NEWLINE", "\n", "SPACE", " "}
+	expectedOutput := `[
+	{
+		"name": "Leonard Cohen",
+		"lastSeen": 1478476800,
+		"loggedOut": true
+	}
+]`
+
+	storage.HandleJSONGet(args, store)
+	output := captureCLIOutput() // Helper to capture printed CLI output
+
+	if output != expectedOutput {
+		t.Errorf("Expected:\n%s\nGot:\n%s", expectedOutput, output)
+	}
+}
