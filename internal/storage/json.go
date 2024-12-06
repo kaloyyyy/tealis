@@ -1,11 +1,140 @@
-package protocol
+package storage
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 )
+
+// JSONSet JSON.SET function (sets a value at a path in a JSON-like structure)
+func (r *RedisClone) JSONSet(key string, path string, value interface{}) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Handle the special case where the path is "."
+	if path == "." {
+		// Directly serialize the value as JSON and store it
+		serializedData, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		r.Store[key] = string(serializedData)
+		return nil
+	}
+
+	// Otherwise, handle nested paths
+	var data map[string]interface{}
+	if existing, exists := r.Store[key]; exists {
+		// Unmarshal the existing data into a map
+		data = make(map[string]interface{})
+		if err := json.Unmarshal([]byte(existing), &data); err != nil {
+			return err
+		}
+	} else {
+		data = make(map[string]interface{})
+	}
+
+	// Set the value at the specified path
+	updatedData, err := setAtPath(data, path, value)
+	if err != nil {
+		return err
+	}
+
+	// Serialize the updated data and store it
+	serializedData, err := json.Marshal(updatedData)
+	if err != nil {
+		return err
+	}
+	r.Store[key] = string(serializedData)
+	return nil
+}
+
+// JSONGet retrieves a value from a JSON-like structure
+func (r *RedisClone) JSONGet(key string, path string) (interface{}, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// Retrieve the raw JSON data from the store
+	existing, exists := r.Store[key]
+	if !exists {
+		return nil, fmt.Errorf("key not found")
+	}
+
+	// Unmarshal the stored JSON string into a generic interface
+	var jsonData interface{}
+	if err := json.Unmarshal([]byte(existing), &jsonData); err != nil {
+		return nil, fmt.Errorf("failed to parse stored JSON: %v", err)
+	}
+
+	// Handle the special case for root path "."
+	if path == "." {
+		return jsonData, nil
+	}
+
+	// Pass the path as-is to getAtPath to handle nested paths
+	return getAtPath(jsonData, path)
+}
+
+// JSONDel JSON.DEL function (deletes a value from a JSON-like structure)
+func (r *RedisClone) JSONDel(key, path string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	data, exists := r.Store[key]
+	if !exists {
+		return errors.New("key not found")
+	}
+
+	var jsonData map[string]interface{}
+	if err := json.Unmarshal([]byte(data), &jsonData); err != nil {
+		return err
+	}
+
+	updatedData, err := deleteAtPath(jsonData, path)
+	if err != nil {
+		return err
+	}
+
+	serializedData, err := json.Marshal(updatedData)
+	if err != nil {
+		return err
+	}
+
+	r.Store[key] = string(serializedData)
+	return nil
+}
+
+// JSONArrAppend JSON.ARRAPPEND function (appends to an array in a JSON-like structure)
+func (r *RedisClone) JSONArrAppend(key, path string, values ...interface{}) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	data, exists := r.Store[key]
+	if !exists {
+		return errors.New("key not found")
+	}
+
+	var jsonData map[string]interface{}
+	if err := json.Unmarshal([]byte(data), &jsonData); err != nil {
+		return err
+	}
+
+	updatedData, err := appendToArray(jsonData, path, values...)
+	if err != nil {
+		return err
+	}
+
+	serializedData, err := json.Marshal(updatedData)
+	if err != nil {
+		return err
+	}
+
+	r.Store[key] = string(serializedData)
+	return nil
+}
 
 func setAtPath(data interface{}, path string, value interface{}) (interface{}, error) {
 	parts := strings.Split(path, ".")
@@ -65,10 +194,45 @@ func parseIndex(part string) (int, error) {
 	}
 	return 0, fmt.Errorf("invalid array index: %s", part)
 }
-
 func getAtPath(data interface{}, path string) (interface{}, error) {
-	parts := strings.Split(path, ".")
-	return getValue(data, parts)
+	// If path is ".", return the entire object
+	if path == "." {
+		return data, nil
+	}
+
+	// Remove the leading dot and split the path into parts
+	parts := strings.Split(strings.TrimPrefix(path, "."), ".")
+
+	// Traverse the JSON structure
+	var current interface{} = data
+	var dataStr = data
+	fmt.Printf("datastr %s", dataStr)
+	err := json.Unmarshal([]byte(dataStr.(string)), &current)
+	if err != nil {
+		fmt.Println("Error unmarshaling JSON:", err)
+		return nil, nil
+	}
+
+	for _, part := range parts {
+		// Check the type of current, and navigate accordingly
+		v := reflect.TypeOf(current)
+		switch v.String() {
+		case "map[string]interface {}":
+			// Look for the key in the map
+			val, exists := current.(map[string]interface{})[part]
+			if !exists {
+				return nil, fmt.Errorf("path not found: %s", part)
+			}
+			current = val
+		case "[]interface{}":
+			// Handle array indexing (not currently supported in your example)
+			return nil, fmt.Errorf("unexpected array at path: %s", part)
+		default:
+			return nil, fmt.Errorf("unexpected type at path %s: %T", part, current)
+		}
+	}
+
+	return current, nil
 }
 
 func getValue(data interface{}, parts []string) (interface{}, error) {

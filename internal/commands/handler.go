@@ -3,6 +3,7 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -34,6 +35,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		}
 		store.Set(key, value, ttl)
 		return "+OK"
+
 	case "GET":
 		if len(parts) < 2 {
 			return "-ERR GET requires a key"
@@ -44,6 +46,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "$-1"
 		}
 		return "$" + strconv.Itoa(len(value)) + "\r\n" + value
+
 	case "DEL":
 		if len(parts) < 2 {
 			return "-ERR DEL requires a key"
@@ -53,6 +56,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return ":1"
 		}
 		return ":0"
+
 	case "EXISTS":
 		if len(parts) < 2 {
 			return "-ERR EXISTS requires a key"
@@ -62,8 +66,10 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return ":1"
 		}
 		return ":0"
+
 	case "QUIT":
 		return "+OK"
+
 	case "APPEND":
 		if len(parts) < 3 {
 			return "-ERR APPEND requires key and value"
@@ -71,6 +77,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		key, value := parts[1], parts[2]
 		newLength := store.Append(key, value)
 		return ":" + strconv.Itoa(newLength)
+
 	case "STRLEN":
 		if len(parts) < 2 {
 			return "-ERR STRLEN requires a key"
@@ -78,6 +85,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		key := parts[1]
 		length := store.StrLen(key)
 		return ":" + strconv.Itoa(length)
+
 	case "INCR":
 		if len(parts) < 2 {
 			return "-ERR INCR requires a key"
@@ -88,6 +96,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "-ERR " + err.Error()
 		}
 		return ":" + strconv.Itoa(newValue)
+
 	case "DECR":
 		if len(parts) < 2 {
 			return "-ERR DECR requires a key"
@@ -98,6 +107,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "-ERR " + err.Error()
 		}
 		return ":" + strconv.Itoa(newValue)
+
 	case "INCRBY":
 		if len(parts) < 3 {
 			return "-ERR INCRBY requires a key and increment value"
@@ -112,6 +122,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "-ERR " + err.Error()
 		}
 		return ":" + strconv.Itoa(newValue)
+
 	case "DECRBY":
 		if len(parts) < 3 {
 			return "-ERR DECRBY requires a key and decrement value"
@@ -126,6 +137,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "-ERR " + err.Error()
 		}
 		return ":" + strconv.Itoa(newValue)
+
 	case "GETRANGE":
 		if len(parts) < 4 {
 			return "-ERR GETRANGE requires key, start, and end"
@@ -138,6 +150,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		}
 		result := store.GetRange(key, start, end)
 		return "$" + strconv.Itoa(len(result)) + "\r\n" + result
+
 	case "SETRANGE":
 		if len(parts) < 4 {
 			return "-ERR SETRANGE requires key, offset, and value"
@@ -149,6 +162,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		}
 		newLength := store.SetRange(key, offset, value)
 		return ":" + strconv.Itoa(newLength)
+
 	case "KEYS":
 		if len(parts) < 2 {
 			return "-ERR KEYS requires a pattern"
@@ -167,27 +181,34 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		}
 		key, path, value := parts[1], parts[2], parts[3]
 		fmt.Printf("")
-		fmt.Printf("handler set %s %s %s\n", key, path, value)
+		fmt.Printf("%s handler set %s %s %s\n", parts, key, path, value)
 		err := store.JSONSet(key, path, value)
 		if err != nil {
 			return "-ERR " + err.Error()
 		}
 		return "+OK"
+
 	case "JSON.GET":
 		if len(parts) < 3 {
 			return "-ERR JSON.GET requires key and path"
 		}
 		key, path := parts[1], parts[2]
+
+		// Retrieve the value from the store
 		value, err := store.JSONGet(key, path)
 		if err != nil {
 			return "-ERR " + err.Error()
 		}
-		// Handle value as string for JSON.GET
-		strValue, ok := value.(string)
-		if !ok {
-			return "-ERR JSON GET value is not a string"
+
+		// Serialize the value to a JSON string
+		jsonValue, err := json.Marshal(value)
+		if err != nil {
+			return "-ERR Failed to serialize value to JSON: " + err.Error()
 		}
-		return "$" + strconv.Itoa(len(strValue)) + "\r\n" + strValue
+
+		// Return the serialized value with the correct RESP formatting
+		return "$" + strconv.Itoa(len(jsonValue)) + "\r\n" + string(jsonValue)
+
 	case "JSON.DEL":
 		if len(parts) < 3 {
 			return "-ERR JSON.DEL requires key and path"
@@ -198,6 +219,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "-ERR " + err.Error()
 		}
 		return ":1"
+
 	case "JSON.ARRAPPEND":
 		if len(parts) < 4 {
 			return "-ERR JSON.ARRAPPEND requires key, path, and value(s)"

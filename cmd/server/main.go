@@ -32,7 +32,7 @@ func main() {
 
 	// Log that the server is running
 	log.Println("Redis clone is running on port 6379...")
-
+	log.Println("use `telnet 127.0.0.1 6379` to connect")
 	// Graceful shutdown setup
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan, syscall.SIGINT, syscall.SIGTERM)
