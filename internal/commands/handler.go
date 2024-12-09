@@ -221,20 +221,22 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		}
 		return ":1"
 
-	//case "JSON.ARRAPPEND":
-	//	if len(parts) < 4 {
-	//		return "-ERR JSON.ARRAPPEND requires key, path, and value(s)"
-	//	}
-	//	key, path := parts[1], parts[2]
-	//	values := make([]interface{}, len(parts)-3)
-	//	for i, v := range parts[3:] {
-	//		values[i] = v
-	//	}
-	//	err := store.JSONArrAppend(key, path, values...)
-	//	if err != nil {
-	//		return "-ERR " + err.Error()
-	//	}
-	//	return ":1"
+	case "JSON.ARRAPPEND":
+		if len(parts) < 4 {
+			return "-ERR JSON.ARRAPPEND requires key, path, and value(s)"
+		}
+		key, path, stringVal := parts[1], parts[2], parts[3]
+		stringArr := strings.Split(stringVal, ",")
+		// Step 2: Convert the slice of strings to a slice of interface{}
+		stringInterface := make([]interface{}, len(stringArr))
+		for i, v := range stringArr {
+			stringInterface[i] = v
+		}
+		err := store.JSONArrAppend(key, path, stringInterface)
+		if err != nil {
+			return "-ERR " + err.Error()
+		}
+		return ":1"
 
 	default:
 		return "-ERR Unknown command"

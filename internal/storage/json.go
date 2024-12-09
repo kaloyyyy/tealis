@@ -252,3 +252,54 @@ func getAtPath(data interface{}, path string) (interface{}, error) {
 	}
 	return currentValue, nil
 }
+
+// JSONArrAppend appends values to an array at the specified path.
+func (r *RedisClone) JSONArrAppend(key string, path string, values []interface{}) error {
+	// Remove leading dot if present
+	if strings.HasPrefix(path, ".") {
+		path = path[1:]
+	}
+	data, err := r.JSONGet(key, ".")
+	if err != nil {
+		return err
+	}
+	// Split the path into parts
+	parts := strings.Split(path, ".")
+	done := false
+	// Traverse the data based on the parts
+	currentValue := data
+	for i, part := range parts {
+		// If we're at the last part, ensure it's an array and append to it
+		if i == len(parts)-1 {
+			if m, ok := currentValue.(map[string]interface{}); ok {
+				if arr, ok := m[part].([]interface{}); ok {
+					m[part] = append(arr, values...)
+					done = true
+					break
+				}
+				return fmt.Errorf("key '%s' is not an array", part)
+			}
+			return fmt.Errorf("path '%s' is not a valid map", path)
+		}
+
+		// Traverse deeper into the structure
+		if m, ok := currentValue.(map[string]interface{}); ok {
+			if next, exists := m[part]; exists {
+				currentValue = next
+			} else {
+				return fmt.Errorf("key '%s' not found", part)
+			}
+		} else {
+			return fmt.Errorf("path '%s' is not a valid map at '%s'", path, part)
+		}
+	}
+	serializedData, err := json.Marshal(currentValue)
+	if err != nil {
+		return err
+	}
+	r.Store[key] = string(serializedData)
+	if done {
+		return nil
+	}
+	return fmt.Errorf("invalid path '%s'", path)
+}
