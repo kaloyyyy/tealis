@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
+	_ "reflect"
 	"strconv"
 	"strings"
 )
@@ -28,7 +28,7 @@ func (r *RedisClone) JSONSet(key string, path string, value string) error {
 			return err
 		}
 		var jsonData map[string]interface{}
-		if err := json.Unmarshal([]byte(serializedData), &jsonData); err != nil {
+		if err := json.Unmarshal(serializedData, &jsonData); err != nil {
 			return err
 		}
 		fmt.Printf("unserial %s", jsonData)
@@ -90,71 +90,73 @@ func (r *RedisClone) JSONGet(key string, path string) (interface{}, error) {
 }
 
 // JSONDel JSON.DEL function (deletes a value from a JSON-like structure)
-func (r *RedisClone) JSONDel(key, path string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	existing, exists := r.Store[key]
-	if !exists {
-		return fmt.Errorf("key not found")
+func (r *RedisClone) JSONDel(key string, path string) error {
+	// Remove leading dot if present
+	data, err := r.JSONGet(key, ".")
+	if err != nil {
+		return err
+	}
+	if strings.HasPrefix(path, ".") {
+		path = path[1:]
 	}
 
-	// Special case: Delete the entire key when path is "."
-	if path == "." {
-		delete(r.Store, key)
-		delete(r.expiries, key)
+	// Split the path into parts
+	parts := strings.Split(path, ".")
+
+	// If the path is empty or only contains "." delete the whole data
+	if path == "" || path == "." {
+		if _, exists := r.Store[key]; exists {
+			delete(r.Store, key)
+			delete(r.expiries, key)
+			return nil
+		}
 		return nil
 	}
 
-	// Deserialize the stored JSON string
-	var jsonData map[string]interface{}
-	if err := json.Unmarshal([]byte(existing), &jsonData); err != nil {
-		return fmt.Errorf("failed to parse stored JSON: %w", err)
-	}
+	// Traverse the data based on the parts
+	currentValue := data
+	var done = false
+	for i, part := range parts {
+		// Check if current value is a map
+		if m, ok := currentValue.(map[string]interface{}); ok {
+			if i == len(parts)-1 {
+				// If we're at the last part, delete the key
+				delete(m, part)
+				done = true
+				break
+			}
+			currentValue = m[part]
+			if currentValue == nil {
+				return fmt.Errorf("key '%s' not found", part)
+			}
+		} else if arr, ok := currentValue.([]interface{}); ok {
+			// If current value is an array, try to access the index (part should be numeric)
+			var index int
+			_, err := fmt.Sscanf(part, "%d", &index)
+			if err != nil || index < 0 || index >= len(arr) {
+				return fmt.Errorf("invalid index '%s' for array", part)
+			}
+			if i == len(parts)-1 {
+				// If we're at the last part, set the element to nil (deletes it)
 
-	// Delete the value at the specified path
-	updatedData, err := deleteAtPath(jsonData, path)
+				arr[index] = nil
+				done = true
+				break
+			}
+			currentValue = arr[index]
+		} else {
+			return fmt.Errorf("invalid path '%s' at part '%s'", path, part)
+		}
+	}
+	serializedData, err := json.Marshal(currentValue)
 	if err != nil {
-		return fmt.Errorf("failed to delete path %s: %w", path, err)
+		return err
 	}
-
-	// Serialize the updated JSON back to a string
-	serializedData, err := json.Marshal(updatedData)
-	if err != nil {
-		return fmt.Errorf("failed to serialize updated JSON: %w", err)
-	}
-
 	r.Store[key] = string(serializedData)
-	return nil
-}
-
-// JSONArrAppend JSON.ARRAPPEND function (appends to an array in a JSON-like structure)
-func (r *RedisClone) JSONArrAppend(key, path string, values ...interface{}) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	data, exists := r.Store[key]
-	if !exists {
-		return errors.New("key not found")
+	if done {
+		return nil
 	}
-
-	var jsonData map[string]interface{}
-	if err := json.Unmarshal([]byte(data), &jsonData); err != nil {
-		return err
-	}
-
-	updatedData, err := appendToArray(jsonData, path, values...)
-	if err != nil {
-		return err
-	}
-
-	serializedData, err := json.Marshal(updatedData)
-	if err != nil {
-		return err
-	}
-
-	r.Store[key] = string(serializedData)
-	return nil
+	return fmt.Errorf("path '%s' not found", path)
 }
 
 func setAtPath(data interface{}, path string, value interface{}) (interface{}, error) {
@@ -215,149 +217,38 @@ func parseIndex(part string) (int, error) {
 	}
 	return 0, fmt.Errorf("invalid array index: %s", part)
 }
+
+// getAtPath retrieves the value from a map based on the given dot-separated path.
 func getAtPath(data interface{}, path string) (interface{}, error) {
-	// If path is ".", return the entire object
-	if path == "." {
-		return data, nil
+	// Remove leading dot if present
+	if strings.HasPrefix(path, ".") {
+		path = path[1:]
 	}
 
-	// Remove the leading dot and split the path into parts
-	parts := strings.Split(strings.TrimPrefix(path, "."), ".")
+	// Split the path into parts
+	parts := strings.Split(path, ".")
 
-	// Traverse the JSON structure
-	var current interface{} = data
-	var dataStr = data
-	fmt.Printf("datastr %s", dataStr)
-	err := json.Unmarshal([]byte(dataStr.(string)), &current)
-	if err != nil {
-		fmt.Println("Error unmarshaling JSON:", err)
-		return nil, nil
-	}
-
+	// Traverse the data based on the parts
+	currentValue := data
 	for _, part := range parts {
-		// Check the type of current, and navigate accordingly
-		v := reflect.TypeOf(current)
-		switch v.String() {
-		case "map[string]interface {}":
-			// Look for the key in the map
-			val, exists := current.(map[string]interface{})[part]
-			if !exists {
-				return nil, fmt.Errorf("path not found: %s", part)
+		// Check if current value is a map
+		if m, ok := currentValue.(map[string]interface{}); ok {
+			currentValue = m[part]
+			if currentValue == nil {
+				return nil, fmt.Errorf("key '%s' not found", part)
 			}
-			current = val
-		case "[]interface{}":
-			// Handle array indexing (not currently supported in your example)
-			return nil, fmt.Errorf("unexpected array at path: %s", part)
-		default:
-			return nil, fmt.Errorf("unexpected type at path %s: %T", part, current)
-		}
-	}
-
-	return current, nil
-}
-
-func getValue(data interface{}, parts []string) (interface{}, error) {
-	if len(parts) == 0 {
-		return data, nil
-	}
-
-	// If it's a map (JSON object)
-	if m, ok := data.(map[string]interface{}); ok {
-		key := parts[0]
-		rest := parts[1:]
-
-		if val, exists := m[key]; exists {
-			return getValue(val, rest)
-		}
-		return nil, errors.New("key not found")
-	}
-
-	// If it's a slice (JSON array)
-	if arr, ok := data.([]interface{}); ok {
-		index, err := parseIndex(parts[0])
-		if err != nil || index >= len(arr) {
-			return nil, errors.New("invalid array index")
-		}
-		return getValue(arr[index], parts[1:])
-	}
-
-	return nil, errors.New("invalid path or data type")
-}
-
-func deleteAtPath(data interface{}, path string) (interface{}, error) {
-	parts := strings.Split(path, ".")
-	return deleteValue(data, parts)
-}
-
-func deleteValue(data interface{}, parts []string) (interface{}, error) {
-	if len(parts) == 0 {
-		return nil, nil // Return nil to delete the value
-	}
-
-	// If it's a map (JSON object)
-	if m, ok := data.(map[string]interface{}); ok {
-		key := parts[0]
-		rest := parts[1:]
-
-		if len(rest) == 0 {
-			delete(m, key) // Delete the key from the map
-			return m, nil
-		}
-
-		if val, exists := m[key]; exists {
-			updatedVal, err := deleteValue(val, rest)
-			if err != nil {
-				return nil, err
+		} else if arr, ok := currentValue.([]interface{}); ok {
+			// If current value is an array, try to access the index (part should be numeric)
+			var index int
+			_, err := fmt.Sscanf(part, "%d", &index)
+			if err != nil || index < 0 || index >= len(arr) {
+				return nil, fmt.Errorf("invalid index '%s' for array", part)
 			}
-			m[key] = updatedVal
-			return m, nil
-		}
-		return nil, errors.New("key not found")
-	}
-
-	// If it's a slice (JSON array)
-	if arr, ok := data.([]interface{}); ok {
-		index, err := parseIndex(parts[0])
-		if err != nil || index >= len(arr) {
-			return nil, errors.New("invalid array index")
-		}
-		// Remove the element from the array
-		arr = append(arr[:index], arr[index+1:]...)
-		return arr, nil
-	}
-
-	return nil, errors.New("invalid path or data type")
-}
-
-func appendToArray(data interface{}, path string, values ...interface{}) (interface{}, error) {
-	parts := strings.Split(path, ".")
-	return appendValues(data, parts, values)
-}
-
-func appendValues(data interface{}, parts []string, values []interface{}) (interface{}, error) {
-	if len(parts) == 0 {
-		// If we're at the right path, append to the array
-		if arr, ok := data.([]interface{}); ok {
-			arr = append(arr, values...)
-			return arr, nil
-		}
-		return nil, errors.New("path does not point to an array")
-	}
-
-	// If it's a map (JSON object)
-	if m, ok := data.(map[string]interface{}); ok {
-		key := parts[0]
-		rest := parts[1:]
-
-		if val, exists := m[key]; exists {
-			updatedVal, err := appendValues(val, rest, values)
-			if err != nil {
-				return nil, err
-			}
-			m[key] = updatedVal
-			return m, nil
+			currentValue = arr[index]
+		} else {
+			// If the current value is neither a map nor an array, return an error
+			return nil, fmt.Errorf("invalid path '%s' at part '%s'", path, part)
 		}
 	}
-
-	return nil, errors.New("invalid path or data type")
+	return currentValue, nil
 }

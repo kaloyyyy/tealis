@@ -214,26 +214,27 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "-ERR JSON.DEL requires key and path"
 		}
 		key, path := parts[1], parts[2]
-		err := store.JSONDel(key, path)
+
+		var err = store.JSONDel(key, path)
 		if err != nil {
 			return "-ERR " + err.Error()
 		}
 		return ":1"
 
-	case "JSON.ARRAPPEND":
-		if len(parts) < 4 {
-			return "-ERR JSON.ARRAPPEND requires key, path, and value(s)"
-		}
-		key, path := parts[1], parts[2]
-		values := make([]interface{}, len(parts)-3)
-		for i, v := range parts[3:] {
-			values[i] = v
-		}
-		err := store.JSONArrAppend(key, path, values...)
-		if err != nil {
-			return "-ERR " + err.Error()
-		}
-		return ":1"
+	//case "JSON.ARRAPPEND":
+	//	if len(parts) < 4 {
+	//		return "-ERR JSON.ARRAPPEND requires key, path, and value(s)"
+	//	}
+	//	key, path := parts[1], parts[2]
+	//	values := make([]interface{}, len(parts)-3)
+	//	for i, v := range parts[3:] {
+	//		values[i] = v
+	//	}
+	//	err := store.JSONArrAppend(key, path, values...)
+	//	if err != nil {
+	//		return "-ERR " + err.Error()
+	//	}
+	//	return ":1"
 
 	default:
 		return "-ERR Unknown command"
