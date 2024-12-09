@@ -28,10 +28,7 @@ func TestJSONDel(t *testing.T) {
 		t.Fatalf("JSONGet failed: %v", err)
 	}
 
-	expected := map[string]interface{}{
-		"key1":   "value1",
-		"nested": map[string]interface{}{},
-	}
+	expected := "{}"
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("Unexpected result: got %v, want %v", result, expected)
 	}

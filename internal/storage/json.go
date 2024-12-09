@@ -15,58 +15,29 @@ func (r *RedisClone) JSONSet(key string, path string, value string) error {
 	defer r.mu.Unlock()
 
 	// Handle the special case where the path is "."
-	if path == "." {
-		// Step 1: Unmarshal the JSON into a map
-		var result map[string]interface{}
-		err := json.Unmarshal([]byte(value), &result)
-		if err != nil {
-			fmt.Printf("Error unmarshaling JSON: %v", err)
-		}
-		// Directly serialize the value as JSON and store it
-		serializedData, err := json.Marshal(result)
-		if err != nil {
-			return err
-		}
-		var jsonData map[string]interface{}
-		if err := json.Unmarshal(serializedData, &jsonData); err != nil {
-			return err
-		}
-		fmt.Printf("unserial %s", jsonData)
-		r.Store[key] = string(serializedData)
-		return nil
-	}
 
-	// Otherwise, handle nested paths
-	var data map[string]interface{}
-	if existing, exists := r.Store[key]; exists {
-		// Unmarshal the existing data into a map
-		data = make(map[string]interface{})
-		if err := json.Unmarshal([]byte(existing), &data); err != nil {
-			return err
-		}
-	} else {
-		data = make(map[string]interface{})
+	// Step 1: Unmarshal the JSON into a map
+	var result map[string]interface{}
+	err := json.Unmarshal([]byte(value), &result)
+	if err != nil {
+		fmt.Printf("Error unmarshaling JSON: %v", err)
 	}
-
-	// Set the value at the specified path
-	updatedData, err := setAtPath(data, path, value)
+	// Directly serialize the value as JSON and store it
+	serializedData, err := json.Marshal(result)
 	if err != nil {
 		return err
 	}
-
-	// Serialize the updated data and store it
-	serializedData, err := json.Marshal(updatedData)
-	if err != nil {
+	var jsonData map[string]interface{}
+	if err := json.Unmarshal(serializedData, &jsonData); err != nil {
 		return err
 	}
-	r.Store[key] = string(serializedData)
+	fmt.Printf("unserial %s", jsonData)
+	r.Store[key] = result
 	return nil
 }
 
 // JSONGet retrieves a value from a JSON-like structure
 func (r *RedisClone) JSONGet(key string, path string) (interface{}, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
 
 	// Retrieve the raw JSON data from the store
 	existing, exists := r.Store[key]
@@ -76,10 +47,10 @@ func (r *RedisClone) JSONGet(key string, path string) (interface{}, error) {
 
 	// Unmarshal the stored JSON string into a generic interface
 	var jsonData interface{}
-	if err := json.Unmarshal([]byte(existing), &jsonData); err != nil {
-		return nil, fmt.Errorf("failed to parse stored JSON: %v", err)
-	}
-
+	//if err := json.Unmarshal([]byte(existing), &jsonData); err != nil {
+	//	return nil, fmt.Errorf("failed to parse stored JSON: %v", err)
+	//}
+	jsonData = existing
 	// Handle the special case for root path "."
 	if path == "." {
 		return jsonData, nil
@@ -255,6 +226,8 @@ func getAtPath(data interface{}, path string) (interface{}, error) {
 
 // JSONArrAppend appends values to an array at the specified path.
 func (r *RedisClone) JSONArrAppend(key string, path string, values []interface{}) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	// Remove leading dot if present
 	if strings.HasPrefix(path, ".") {
 		path = path[1:]

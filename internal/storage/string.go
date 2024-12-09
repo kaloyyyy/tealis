@@ -35,7 +35,10 @@ func (r *RedisClone) Get(key string) (string, bool) {
 	}
 
 	value, exists := r.Store[key]
-	return value, exists
+	if value != nil {
+		return value.(string), exists
+	}
+	return "", exists
 }
 
 // Del deletes a key from the store.
@@ -65,11 +68,11 @@ func (r *RedisClone) Append(key, value string) int {
 	defer r.mu.Unlock()
 
 	if current, exists := r.Store[key]; exists {
-		r.Store[key] = current + value
+		r.Store[key] = current.(string) + value
 	} else {
 		r.Store[key] = value
 	}
-	return len(r.Store[key])
+	return len(r.Store[key].(string))
 }
 
 // StrLen returns the length of a string value for a key.
@@ -78,7 +81,7 @@ func (r *RedisClone) StrLen(key string) int {
 	defer r.mu.RUnlock()
 
 	if value, exists := r.Store[key]; exists {
-		return len(value)
+		return len(value.(string))
 	}
 	return 0
 }
@@ -94,7 +97,7 @@ func (r *RedisClone) IncrBy(key string, increment int) (int, error) {
 		return increment, nil
 	}
 
-	currentInt, err := strconv.Atoi(current)
+	currentInt, err := strconv.Atoi(current.(string))
 	if err != nil {
 		return 0, fmt.Errorf("value is not an integer")
 	}
@@ -109,7 +112,7 @@ func (r *RedisClone) GetRange(key string, start, end int) string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	value, exists := r.Store[key]
+	value, exists := r.Store[key].(string)
 	if !exists {
 		return ""
 	}
@@ -144,7 +147,7 @@ func (r *RedisClone) SetRange(key string, offset int, value string) int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	currentValue, exists := r.Store[key]
+	currentValue, exists := r.Store[key].(string)
 	if !exists {
 		currentValue = ""
 	}
