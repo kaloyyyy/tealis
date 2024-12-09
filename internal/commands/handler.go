@@ -237,6 +237,104 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "-ERR " + err.Error()
 		}
 		return ":1"
+	case "LPUSH":
+		if len(parts) < 3 {
+			return "-ERR LPUSH requires a key and one or more elements"
+		}
+		key := parts[1]
+		elements := parts[2:]
+		newLength := store.LPUSH(key, elements...)
+		return fmt.Sprintf(":%d", newLength)
+
+	case "RPUSH":
+		if len(parts) < 3 {
+			return "-ERR RPUSH requires a key and one or more elements"
+		}
+		key := parts[1]
+		elements := parts[2:]
+		newLength := store.RPUSH(key, elements...)
+		return fmt.Sprintf(":%d", newLength)
+
+	case "LPOP":
+		if len(parts) < 2 {
+			return "-ERR LPOP requires a key"
+		}
+		key := parts[1]
+		element, ok := store.LPOP(key)
+		if !ok {
+			return "$-1"
+		}
+		return "$" + strconv.Itoa(len(element)) + "\r\n" + element
+
+	case "RPOP":
+		if len(parts) < 2 {
+			return "-ERR RPOP requires a key"
+		}
+		key := parts[1]
+		element, ok := store.RPOP(key)
+		if !ok {
+			return "$-1"
+		}
+		return "$" + strconv.Itoa(len(element)) + "\r\n" + element
+
+	case "LLEN":
+		if len(parts) < 2 {
+			return "-ERR LLEN requires a key"
+		}
+		key := parts[1]
+		length := store.LLEN(key)
+		return fmt.Sprintf(":%d", length)
+
+	case "LRANGE":
+		if len(parts) < 4 {
+			return "-ERR LRANGE requires a key, start, and end"
+		}
+		key := parts[1]
+		start, err1 := strconv.Atoi(parts[2])
+		end, err2 := strconv.Atoi(parts[3])
+		if err1 != nil || err2 != nil {
+			return "-ERR Start and end must be integers"
+		}
+		elements := store.LRANGE(key, start, end)
+		return formatArrayResponse(elements)
+	case "SADD":
+		if len(parts) < 3 {
+			return "-ERR SADD requires a key and one or more members"
+		}
+		key := parts[1]
+		members := parts[2:]
+		addedCount := store.SADD(key, members...)
+		return fmt.Sprintf(":%d", addedCount)
+
+	case "SMEMBERS":
+		if len(parts) < 2 {
+			return "-ERR SMEMBERS requires a key"
+		}
+		key := parts[1]
+		members := store.SMEMBERS(key)
+		if len(members) == 0 {
+			return "(empty list or set)"
+		}
+		return formatArrayResponse(members)
+	case "SREM":
+		if len(parts) < 3 {
+			return "-ERR SREM requires a key and one or more members"
+		}
+		key := parts[1]
+		members := parts[2:]
+		removedCount := store.SREM(key, members...)
+		return fmt.Sprintf(":%d", removedCount)
+	case "SISMEMBER":
+		if len(parts) < 3 {
+			return "-ERR SISMEMBER requires a key and a member"
+		}
+		key := parts[1]
+		member := parts[2]
+		exists := store.SISMEMBER(key, member)
+		if exists {
+			return ":1"
+		}
+		return ":0"
 
 	default:
 		return "-ERR Unknown command"

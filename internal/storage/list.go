@@ -100,3 +100,25 @@ func (r *RedisClone) LRANGE(key string, start, stop int) []string {
 
 	return list[start : stop+1]
 }
+
+// LLEN retrieves the length of the list stored at the given key.
+func (r *RedisClone) LLEN(key string) int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// Check if the key exists in the store.
+	value, exists := r.Store[key]
+	if !exists {
+		return 0
+	}
+
+	// Assert the value is a list (i.e., []interface{}).
+	if list, ok := value.([]interface{}); ok {
+		return len(list)
+	} else {
+		return len(value.([]string))
+	}
+
+	// If the value is not a list, return 0 (not a valid operation for non-lists).
+	return 0
+}
