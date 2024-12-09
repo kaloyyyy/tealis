@@ -10,17 +10,28 @@ import (
 )
 
 // JSONSet JSON.SET function (sets a value at a path in a JSON-like structure)
-func (r *RedisClone) JSONSet(key string, path string, value interface{}) error {
+func (r *RedisClone) JSONSet(key string, path string, value string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	// Handle the special case where the path is "."
 	if path == "." {
+		// Step 1: Unmarshal the JSON into a map
+		var result map[string]interface{}
+		err := json.Unmarshal([]byte(value), &result)
+		if err != nil {
+			fmt.Printf("Error unmarshaling JSON: %v", err)
+		}
 		// Directly serialize the value as JSON and store it
-		serializedData, err := json.Marshal(value)
+		serializedData, err := json.Marshal(result)
 		if err != nil {
 			return err
 		}
+		var jsonData map[string]interface{}
+		if err := json.Unmarshal([]byte(serializedData), &jsonData); err != nil {
+			return err
+		}
+		fmt.Printf("unserial %s", jsonData)
 		r.Store[key] = string(serializedData)
 		return nil
 	}
@@ -83,24 +94,34 @@ func (r *RedisClone) JSONDel(key, path string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	data, exists := r.Store[key]
+	existing, exists := r.Store[key]
 	if !exists {
-		return errors.New("key not found")
+		return fmt.Errorf("key not found")
 	}
 
+	// Special case: Delete the entire key when path is "."
+	if path == "." {
+		delete(r.Store, key)
+		delete(r.expiries, key)
+		return nil
+	}
+
+	// Deserialize the stored JSON string
 	var jsonData map[string]interface{}
-	if err := json.Unmarshal([]byte(data), &jsonData); err != nil {
-		return err
+	if err := json.Unmarshal([]byte(existing), &jsonData); err != nil {
+		return fmt.Errorf("failed to parse stored JSON: %w", err)
 	}
 
+	// Delete the value at the specified path
 	updatedData, err := deleteAtPath(jsonData, path)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to delete path %s: %w", path, err)
 	}
 
+	// Serialize the updated JSON back to a string
 	serializedData, err := json.Marshal(updatedData)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to serialize updated JSON: %w", err)
 	}
 
 	r.Store[key] = string(serializedData)
