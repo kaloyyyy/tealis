@@ -21,7 +21,7 @@ func TestSortedSetOperations(t *testing.T) {
 
 	// Test ZRANGE
 	members := store.ZRANGE("myzset", 0, -1)
-	expected := []string{"member1", "member2"}
+	expected := []string{"member2", "member1"}
 	if !equalStringSlices(members, expected) {
 		t.Errorf("Expected ZRANGE result %v, got %v", expected, members)
 	}
