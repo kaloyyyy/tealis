@@ -335,7 +335,134 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return ":1"
 		}
 		return ":0"
+	case "HSET":
+		if len(parts) < 4 {
+			return "-ERR HSET requires key, field, and value"
+		}
+		key, field, value := parts[1], parts[2], parts[3]
+		added := store.HSET(key, field, value)
+		return ":" + strconv.Itoa(added)
 
+	case "HGET":
+		if len(parts) < 3 {
+			return "-ERR HGET requires key and field"
+		}
+		key, field := parts[1], parts[2]
+		value, exists := store.HGET(key, field)
+		if !exists {
+			return "$-1"
+		}
+		valueStr := fmt.Sprintf("%v", value)
+		return "$" + strconv.Itoa(len(valueStr)) + "\r\n" + valueStr
+
+	case "HMSET":
+		if len(parts) < 4 || len(parts[2:])%2 != 0 {
+			return "-ERR HMSET requires key and field-value pairs"
+		}
+		key := parts[1]
+		fields := make(map[string]interface{})
+		for i := 2; i < len(parts); i += 2 {
+			fields[parts[i]] = parts[i+1]
+		}
+		store.HMSET(key, fields)
+		return "+OK"
+
+	case "HGETALL":
+		if len(parts) < 2 {
+			return "-ERR HGETALL requires a key"
+		}
+		key := parts[1]
+		fields := store.HGETALL(key)
+		if fields == nil {
+			return "$-1"
+		}
+		return formatHashResponse(fields)
+
+	case "HDEL":
+		if len(parts) < 3 {
+			return "-ERR HDEL requires key and field"
+		}
+		key, field := parts[1], parts[2]
+		deleted := store.HDEL(key, field)
+		return ":" + strconv.Itoa(deleted)
+
+	case "HEXISTS":
+		if len(parts) < 3 {
+			return "-ERR HEXISTS requires key and field"
+		}
+		key, field := parts[1], parts[2]
+		exists := store.HEXISTS(key, field)
+		if exists {
+			return ":1"
+		}
+		return ":0"
+
+	case "ZADD":
+		if len(parts) < 4 {
+			return "-ERR ZADD requires key, score, and member"
+		}
+		key := parts[1]
+		score, err := strconv.ParseFloat(parts[2], 64)
+		if err != nil {
+			return "-ERR Score must be a float"
+		}
+		member := parts[3]
+		added := store.ZADD(key, score, member)
+		return ":" + strconv.Itoa(added)
+
+	case "ZRANGE":
+		if len(parts) < 4 {
+			return "-ERR ZRANGE requires key, start, and stop"
+		}
+		key := parts[1]
+		start, err1 := strconv.Atoi(parts[2])
+		stop, err2 := strconv.Atoi(parts[3])
+		if err1 != nil || err2 != nil {
+			return "-ERR Start and stop must be integers"
+		}
+		members := store.ZRANGE(key, start, stop)
+		if len(members) == 0 {
+			return "(empty list or set)"
+		}
+		return formatArrayResponse(members)
+
+	case "ZRANK":
+		if len(parts) < 3 {
+			return "-ERR ZRANK requires key and member"
+		}
+		key, member := parts[1], parts[2]
+		rank := store.ZRANK(key, member)
+		if rank == -1 {
+			return "(nil)"
+		}
+		return ":" + strconv.Itoa(rank)
+
+	case "ZREM":
+		if len(parts) < 3 {
+			return "-ERR ZREM requires key and member"
+		}
+		key, member := parts[1], parts[2]
+		removed := store.ZREM(key, member)
+		if removed {
+			return ":1"
+		}
+		return ":0"
+
+	case "ZRANGEBYSCORE":
+		if len(parts) < 4 {
+			return "-ERR ZRANGEBYSCORE requires key, min, and max"
+		}
+		key := parts[1]
+		min, err1 := strconv.ParseFloat(parts[2], 64)
+		max, err2 := strconv.ParseFloat(parts[3], 64)
+		if err1 != nil || err2 != nil {
+			return "-ERR Min and max must be floats"
+		}
+		members := store.ZRANGEBYSCORE(key, min, max)
+		if len(members) == 0 {
+			return "(empty list or set)"
+		}
+		return formatArrayResponse(members)
 	default:
 		return "-ERR Unknown command"
 	}
@@ -348,6 +475,18 @@ func formatArrayResponse(items []string) string {
 	for _, item := range items {
 		response.WriteString("$" + strconv.Itoa(len(item)) + "\r\n")
 		response.WriteString(item + "\r\n")
+	}
+	return response.String()
+}
+
+func formatHashResponse(fields map[string]interface{}) string {
+	var response strings.Builder
+	response.WriteString("*" + strconv.Itoa(len(fields)*2) + "\r\n")
+	for field, value := range fields {
+		fieldStr := fmt.Sprintf("%v", field)
+		valueStr := fmt.Sprintf("%v", value)
+		response.WriteString("$" + strconv.Itoa(len(fieldStr)) + "\r\n" + fieldStr + "\r\n")
+		response.WriteString("$" + strconv.Itoa(len(valueStr)) + "\r\n" + valueStr + "\r\n")
 	}
 	return response.String()
 }

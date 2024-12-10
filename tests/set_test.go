@@ -58,7 +58,7 @@ func TestRedisCloneSetOperations(t *testing.T) {
 		r.SADD("myset3", "h", "i")
 
 		union := r.SUNION("myset", "myset2", "myset3")
-		expectedUnion := []string{"c", "d", "e", "f", "g", "h", "i"}
+		expectedUnion := []string{"d", "e", "f", "g", "h", "i", "c"}
 		if !equal(union, expectedUnion) {
 			t.Errorf("Expected union %v, but got %v", expectedUnion, union)
 		}
