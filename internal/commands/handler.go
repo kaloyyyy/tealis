@@ -407,7 +407,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "-ERR Score must be a float"
 		}
 		member := parts[3]
-		added := store.ZADD(key, score, member)
+		added := store.ZAdd(key, score, member)
 		return ":" + strconv.Itoa(added)
 
 	case "ZRANGE":
@@ -420,7 +420,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		if err1 != nil || err2 != nil {
 			return "-ERR Start and stop must be integers"
 		}
-		members := store.ZRANGE(key, start, stop)
+		members := store.ZRange(key, start, stop)
 		if len(members) == 0 {
 			return "(empty list or set)"
 		}
@@ -431,7 +431,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "-ERR ZRANK requires key and member"
 		}
 		key, member := parts[1], parts[2]
-		rank := store.ZRANK(key, member)
+		rank := store.ZRank(key, member)
 		if rank == -1 {
 			return "(nil)"
 		}
@@ -442,7 +442,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "-ERR ZREM requires key and member"
 		}
 		key, member := parts[1], parts[2]
-		removed := store.ZREM(key, member)
+		removed := store.ZRem(key, member)
 		if removed {
 			return ":1"
 		}
@@ -458,7 +458,7 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		if err1 != nil || err2 != nil {
 			return "-ERR Min and max must be floats"
 		}
-		members := store.ZRANGEBYSCORE(key, min, max)
+		members := store.ZRangeByScore(key, min, max)
 		if len(members) == 0 {
 			return "(empty list or set)"
 		}

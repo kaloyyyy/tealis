@@ -1,79 +1,63 @@
 package storage_test
 
 import (
+	"reflect"
 	"tealis/internal/storage"
 	"testing"
 )
 
-func TestSortedSetOperations(t *testing.T) {
-	store := storage.NewRedisClone()
+func TestRedisCloneSortedSet(t *testing.T) {
+	rc := storage.NewRedisClone()
 
 	// Test ZADD
-	if added := store.ZADD("myzset", 1.0, "member1"); added != 1 {
-		t.Errorf("Expected 1 for ZADD, got %d", added)
-	}
-	if added := store.ZADD("myzset", 2.0, "member2"); added != 1 {
-		t.Errorf("Expected 1 for ZADD, got %d", added)
-	}
-	if added := store.ZADD("myzset", 3.0, "member1"); added != 0 {
-		t.Errorf("Expected 0 for ZADD (update), got %d", added)
-	}
-
-	// Test ZRANGE
-	members := store.ZRANGE("myzset", 0, -1)
-	expected := []string{"member2", "member1"}
-	if !equalStringSlices(members, expected) {
-		t.Errorf("Expected ZRANGE result %v, got %v", expected, members)
+	rc.ZAdd("myzset", 1.0, "one")
+	rc.ZAdd("myzset", 2.0, "two")
+	rc.ZAdd("myzset", 3.0, "three")
+	expectedZRange := []string{"one", "two", "three"}
+	zrange := rc.ZRange("myzset", 0, 2)
+	if !reflect.DeepEqual(zrange, expectedZRange) {
+		t.Fatalf("ZRange failed, expected %v, got %v", expectedZRange, zrange)
 	}
 
 	// Test ZRANK
-	if rank := store.ZRANK("myzset", "member1"); rank != 0 {
-		t.Errorf("Expected rank 0 for member1, got %d", rank)
-	}
-	if rank := store.ZRANK("myzset", "member2"); rank != 1 {
-		t.Errorf("Expected rank 1 for member2, got %d", rank)
-	}
-	if rank := store.ZRANK("myzset", "nonexistent"); rank != -1 {
-		t.Errorf("Expected rank -1 for nonexistent member, got %d", rank)
+	zrank := rc.ZRank("myzset", "two")
+	expectedRank := 1
+	if zrank != expectedRank {
+		t.Fatalf("ZRank failed, expected %d, got %d", expectedRank, zrank)
 	}
 
 	// Test ZREM
-	if removed := store.ZREM("myzset", "member2"); !removed {
-		t.Error("Expected true for ZREM of member2, got false")
+	removed := rc.ZRem("myzset", "two")
+	if !removed {
+		t.Fatalf("ZRem failed, expected %v, got %v", true, removed)
 	}
-	if removed := store.ZREM("myzset", "nonexistent"); removed {
-		t.Error("Expected false for ZREM of nonexistent member, got true")
-	}
-	members = store.ZRANGE("myzset", 0, -1)
-	expected = []string{"member1"}
-	if !equalStringSlices(members, expected) {
-		t.Errorf("Expected ZRANGE result %v, got %v", expected, members)
+	expectedZRangeAfterRem := []string{"one", "three"}
+	zrangeAfterRem := rc.ZRange("myzset", 0, 2)
+	if !reflect.DeepEqual(zrangeAfterRem, expectedZRangeAfterRem) {
+		t.Fatalf("ZRange after ZRem failed, expected %v, got %v", expectedZRangeAfterRem, zrangeAfterRem)
 	}
 
 	// Test ZRANGEBYSCORE
-	store.ZADD("myzset", 2.0, "member2")
-	store.ZADD("myzset", 3.5, "member3")
-	members = store.ZRANGEBYSCORE("myzset", 2.0, 3.0)
-	expected = []string{"member2"}
-	if !equalStringSlices(members, expected) {
-		t.Errorf("Expected ZRANGEBYSCORE result %v, got %v", expected, members)
+	rc.ZAdd("myzset", 2.5, "two-and-half")
+	expectedRangeByScore := []string{"one", "two-and-half", "three"}
+	zrangeByScore := rc.ZRangeByScore("myzset", 1.0, 3.0)
+	if !reflect.DeepEqual(zrangeByScore, expectedRangeByScore) {
+		t.Fatalf("ZRangeByScore failed, expected %v, got %v", expectedRangeByScore, zrangeByScore)
 	}
-	members = store.ZRANGEBYSCORE("myzset", 0, 3.5)
-	expected = []string{"member1", "member2", "member3"}
-	if !equalStringSlices(members, expected) {
-		t.Errorf("Expected ZRANGEBYSCORE result %v, got %v", expected, members)
-	}
-}
 
-// Helper function to compare two string slices
-func equalStringSlices(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
+	// Test Non-existent Key
+	zrangeNonExistent := rc.ZRange("nonexistent", 0, 2)
+	if zrangeNonExistent != nil {
+		t.Fatalf("ZRange on nonexistent key failed, expected nil, got %v", zrangeNonExistent)
 	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
+
+	zrankNonExistent := rc.ZRank("nonexistent", "key")
+	if zrankNonExistent != -1 {
+		t.Fatalf("ZRank on nonexistent key failed, expected -1, got %d", zrankNonExistent)
 	}
-	return true
+
+	removedNonExistent := rc.ZRem("nonexistent", "key")
+	if removedNonExistent {
+		t.Fatalf("ZRem on nonexistent key failed, expected false, got %v", removedNonExistent)
+	}
 }

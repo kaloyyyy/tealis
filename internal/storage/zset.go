@@ -1,146 +1,179 @@
 package storage
 
-import "sort"
+import (
+	"math/rand"
+	"sync"
+	"time"
+)
 
-// SortedSetEntry represents an entry in the sorted set.
-type SortedSetEntry struct {
-	Score  float64
-	Member string
-}
+const maxLevel = 16 // Maximum levels for the skip list
 
-// SortedSet is a sorted set structure.
+// SortedSet represents a sorted set with a skip list.
 type SortedSet struct {
-	members map[string]float64 // Map of members to their scores
-	sorted  []SortedSetEntry   // Sorted list of entries for range queries
+	mu      sync.RWMutex
+	header  *skipListNode
+	level   int
+	length  int
+	randSrc rand.Source
 }
 
-// ZADD adds a member with a score to a sorted set.
-func (r *RedisClone) ZADD(key string, score float64, member string) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// Retrieve or create the sorted set
-	var set *SortedSet
-	if rawSet, exists := r.Store[key]; exists {
-		set = rawSet.(*SortedSet)
-	} else {
-		set = &SortedSet{members: make(map[string]float64)}
-		r.Store[key] = set
-	}
-
-	// Add or update the member
-	_, exists := set.members[member]
-	set.members[member] = score
-	set.updateSorted()
-
-	if exists {
-		return 0 // Updated
-	}
-	return 1 // New addition
+// skipListNode represents a single node in the skip list.
+type skipListNode struct {
+	key     string
+	score   float64
+	forward []*skipListNode
 }
 
-// ZRANGE returns a range of members by rank.
-func (r *RedisClone) ZRANGE(key string, start, stop int) []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+// NewSortedSet initializes a new sorted set.
+func NewSortedSet() *SortedSet {
+	return &SortedSet{
+		header:  newSkipListNode("", 0, maxLevel),
+		level:   1,
+		randSrc: rand.NewSource(time.Now().UnixNano()),
+	}
+}
 
-	rawSet, exists := r.Store[key]
-	if !exists {
+func newSkipListNode(key string, score float64, level int) *skipListNode {
+	return &skipListNode{
+		key:     key,
+		score:   score,
+		forward: make([]*skipListNode, level),
+	}
+}
+
+// randomLevel generates a random level for the node.
+func (s *SortedSet) randomLevel() int {
+	level := 1
+	for rand.New(s.randSrc).Float32() < 0.5 && level < maxLevel {
+		level++
+	}
+	return level
+}
+
+func (s *SortedSet) ZAdd(key string, score float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	update := make([]*skipListNode, maxLevel)
+	current := s.header
+
+	// Find the position to insert the new node
+	for i := s.level - 1; i >= 0; i-- {
+		for current.forward[i] != nil && (current.forward[i].score < score || (current.forward[i].score == score && current.forward[i].key < key)) {
+			current = current.forward[i]
+		}
+		update[i] = current
+	}
+
+	// Check if the key already exists
+	if current.forward[0] != nil && current.forward[0].key == key {
+		current.forward[0].score = score // Update the score if the key exists
+		return
+	}
+
+	// Insert new node
+	newLevel := s.randomLevel()
+	if newLevel > s.level {
+		for i := s.level; i < newLevel; i++ {
+			update[i] = s.header
+		}
+		s.level = newLevel
+	}
+	node := newSkipListNode(key, score, newLevel)
+	for i := 0; i < newLevel; i++ {
+		node.forward[i] = update[i].forward[i]
+		update[i].forward[i] = node
+	}
+	s.length++
+}
+
+func (s *SortedSet) ZRange(start, end int) []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if start < 0 || end < 0 || start >= s.length || start > end {
 		return nil
 	}
-	set := rawSet.(*SortedSet)
 
-	// Adjust for negative indices
-	if start < 0 {
-		start += len(set.sorted)
-	}
-	if stop < 0 {
-		stop += len(set.sorted)
-	}
-	if start < 0 {
-		start = 0
-	}
-	if stop >= len(set.sorted) {
-		stop = len(set.sorted) - 1
+	result := []string{}
+	current := s.header.forward[0]
+	for i := 0; i < start && current != nil; i++ {
+		current = current.forward[0]
 	}
 
-	// Extract members in the range
-	if start > stop {
-		return nil
+	for i := start; i <= end && current != nil; i++ {
+		result = append(result, current.key)
+		current = current.forward[0]
 	}
-	members := []string{}
-	for _, entry := range set.sorted[start : stop+1] {
-		members = append(members, entry.Member)
-	}
-	return members
+	return result
 }
 
-// ZRANK returns the rank of a member in the sorted set.
-func (r *RedisClone) ZRANK(key, member string) int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+func (s *SortedSet) ZRank(key string) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	rawSet, exists := r.Store[key]
-	if !exists {
-		return -1
-	}
-	set := rawSet.(*SortedSet)
+	current := s.header
+	rank := 0
 
-	for i, entry := range set.sorted {
-		if entry.Member == member {
-			return i
+	for i := s.level - 1; i >= 0; i-- {
+		for current.forward[i] != nil && current.forward[i].key < key {
+			rank++
+			current = current.forward[i]
 		}
 	}
-	return -1
+	if current.forward[0] != nil && current.forward[0].key == key {
+		return rank
+	}
+	return -1 // Key not found
 }
 
-// ZREM removes a member from the sorted set.
-func (r *RedisClone) ZREM(key, member string) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (s *SortedSet) ZRem(key string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	rawSet, exists := r.Store[key]
-	if !exists {
-		return false
-	}
-	set := rawSet.(*SortedSet)
-
-	_, exists = set.members[member]
-	if !exists {
-		return false
+	update := make([]*skipListNode, maxLevel)
+	current := s.header
+	for i := s.level - 1; i >= 0; i-- {
+		for current.forward[i] != nil && current.forward[i].key < key {
+			current = current.forward[i]
+		}
+		update[i] = current
 	}
 
-	delete(set.members, member)
-	set.updateSorted()
+	target := current.forward[0]
+	if target == nil || target.key != key {
+		return false // Key not found
+	}
+
+	for i := 0; i < s.level; i++ {
+		if update[i].forward[i] != target {
+			break
+		}
+		update[i].forward[i] = target.forward[i]
+	}
+
+	// Adjust the level of the skip list
+	for s.level > 1 && s.header.forward[s.level-1] == nil {
+		s.level--
+	}
+	s.length--
 	return true
 }
 
-// ZRANGEBYSCORE returns members with scores within a specified range.
-func (r *RedisClone) ZRANGEBYSCORE(key string, min, max float64) []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+func (s *SortedSet) ZRangeByScore(min, max float64) []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	rawSet, exists := r.Store[key]
-	if !exists {
-		return nil
-	}
-	set := rawSet.(*SortedSet)
+	result := []string{}
+	current := s.header.forward[0]
 
-	members := []string{}
-	for _, entry := range set.sorted {
-		if entry.Score >= min && entry.Score <= max {
-			members = append(members, entry.Member)
-		}
+	for current != nil && current.score < min {
+		current = current.forward[0]
 	}
-	return members
-}
 
-func (s *SortedSet) updateSorted() {
-	s.sorted = s.sorted[:0]
-	for member, score := range s.members {
-		s.sorted = append(s.sorted, SortedSetEntry{Score: score, Member: member})
+	for current != nil && current.score <= max {
+		result = append(result, current.key)
+		current = current.forward[0]
 	}
-	sort.Slice(s.sorted, func(i, j int) bool {
-		return s.sorted[i].Score < s.sorted[j].Score
-	})
+	return result
 }

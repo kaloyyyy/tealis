@@ -42,3 +42,76 @@ func (r *RedisClone) StartCleanup(ctx context.Context) {
 		}
 	}()
 }
+
+func (r *RedisClone) ZAdd(key string, score float64, member string) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Check if the key exists and is a sorted set
+	if val, exists := r.Store[key]; exists {
+		if ss, ok := val.(*SortedSet); ok {
+			ss.ZAdd(member, score)
+			return 1
+		}
+		panic("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+
+	// If key doesn't exist, create a new SortedSet
+	ss := NewSortedSet()
+	ss.ZAdd(member, score)
+	r.Store[key] = ss
+	return 1
+}
+
+func (r *RedisClone) ZRange(key string, start, end int) []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// Check if the key exists and is a sorted set
+	if val, exists := r.Store[key]; exists {
+		if ss, ok := val.(*SortedSet); ok {
+			return ss.ZRange(start, end)
+		}
+		panic("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+	return nil // Key does not exist
+}
+
+func (r *RedisClone) ZRank(key string, member string) int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if val, exists := r.Store[key]; exists {
+		if ss, ok := val.(*SortedSet); ok {
+			return ss.ZRank(member)
+		}
+		panic("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+	return -1 // Key does not exist
+}
+
+func (r *RedisClone) ZRem(key string, member string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if val, exists := r.Store[key]; exists {
+		if ss, ok := val.(*SortedSet); ok {
+			return ss.ZRem(member)
+		}
+		panic("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+	return false // Key does not exist
+}
+
+func (r *RedisClone) ZRangeByScore(key string, min, max float64) []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if val, exists := r.Store[key]; exists {
+		if ss, ok := val.(*SortedSet); ok {
+			return ss.ZRangeByScore(min, max)
+		}
+		panic("WRONGTYPE Operation against a key holding the wrong kind of value")
+	}
+	return nil // Key does not exist
+}
