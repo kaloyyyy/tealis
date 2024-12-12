@@ -463,9 +463,115 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 			return "(empty list or set)"
 		}
 		return formatArrayResponse(members)
+	case "XADD":
+		// Check for at least 4 arguments: key, ID, and at least one field-value pair
+		if len(parts) < 4 || len(parts[3:])%2 != 0 {
+			return "-ERR XADD requires at least key, ID, and field-value pairs"
+		}
+
+		key := parts[1]
+		id := parts[2]
+
+		// Parse field-value pairs
+		fields := make(map[string]string)
+		for i := 3; i < len(parts); i += 2 {
+			fields[parts[i]] = parts[i+1]
+		}
+
+		// Add the entry to the stream
+		result := store.XAdd(key, id, fields)
+		return fmt.Sprintf("+%s", result)
+
+	case "XREAD":
+		if len(parts) < 3 {
+			return "-ERR XREAD requires key and start ID"
+		}
+		key := parts[1]
+		startID := parts[2]
+		count := 0
+		if len(parts) > 3 {
+			var err error
+			count, err = strconv.Atoi(parts[3])
+			if err != nil {
+				return "-ERR Invalid count argument"
+			}
+		}
+		result := store.XRead(key, startID, count)
+		return formatEntries(result)
+
+	case "XRANGE":
+		if len(parts) != 4 {
+			return "-ERR XRANGE requires key, start ID, and end ID"
+		}
+		key := parts[1]
+		startID := parts[2]
+		endID := parts[3]
+		result := store.XRange(key, startID, endID)
+		return formatEntries(result)
+
+	case "XLEN":
+		if len(parts) != 2 {
+			return "-ERR XLEN requires key"
+		}
+		key := parts[1]
+		result := store.XLen(key)
+		return fmt.Sprintf(":%d", result)
+
+	case "XGROUP":
+		if len(parts) < 4 || strings.ToUpper(parts[1]) != "CREATE" {
+			return "-ERR XGROUP CREATE requires key and group name"
+		}
+		key := parts[2]
+		groupName := parts[3]
+		success := store.XGroupCreate(key, groupName)
+		if success {
+			return "+OK"
+		}
+		return "-ERR XGROUP CREATE failed"
+
+	case "XREADGROUP":
+		if len(parts) < 5 {
+			return "-ERR XREADGROUP requires key, group, consumer, and start ID"
+		}
+		key := parts[1]
+		groupName := parts[2]
+		consumerName := parts[3]
+		startID := parts[4]
+		count := 0
+		if len(parts) > 5 {
+			var err error
+			count, err = strconv.Atoi(parts[5])
+			if err != nil {
+				return "-ERR Invalid count argument"
+			}
+		}
+		result := store.XReadGroup(key, groupName, consumerName, startID, count)
+		return formatEntries(result)
+
+	case "XACK":
+		if len(parts) < 4 {
+			return "-ERR XACK requires key, group, and at least one ID"
+		}
+		key := parts[1]
+		groupName := parts[2]
+		ids := parts[3:]
+		result := store.XAck(key, groupName, ids)
+		return fmt.Sprintf(":%d", result)
 	default:
 		return "-ERR Unknown command"
 	}
+}
+
+// formatEntries converts stream entries into a string representation.
+func formatEntries(entries []storage.StreamEntry) string {
+	if len(entries) == 0 {
+		return "(empty list or set)"
+	}
+	var sb strings.Builder
+	for _, entry := range entries {
+		sb.WriteString(fmt.Sprintf("%s: %v\n", entry.ID, entry.Fields))
+	}
+	return sb.String()
 }
 
 // Helper to format an array response for the KEYS command
