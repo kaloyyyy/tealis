@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"math"
+	"sort"
 	"sync"
 	"time"
 )
@@ -114,4 +116,61 @@ func (r *RedisClone) ZRangeByScore(key string, min, max float64) []string {
 		panic("WRONGTYPE Operation against a key holding the wrong kind of value")
 	}
 	return nil // Key does not exist
+}
+
+// GeoLocation represents a geographic location.
+type GeoLocation struct {
+	Latitude  float64
+	Longitude float64
+	Name      string
+}
+
+// GeoSet represents a geospatial sorted set.
+type GeoSet struct {
+	Locations map[string]GeoLocation
+	Sorted    []string // Maintain sorted keys for proximity searches.
+}
+
+// NewGeoSet initializes a new GeoSet.
+func NewGeoSet() *GeoSet {
+	return &GeoSet{
+		Locations: make(map[string]GeoLocation),
+		Sorted:    []string{},
+	}
+}
+
+// Add adds a new location or updates an existing one.
+func (g *GeoSet) Add(name string, lat, lon float64) {
+	location := GeoLocation{
+		Latitude:  lat,
+		Longitude: lon,
+		Name:      name,
+	}
+	g.Locations[name] = location
+	g.Sorted = append(g.Sorted, name)
+	sort.Strings(g.Sorted)
+}
+
+// Distance calculates the haversine distance between two coordinates in kilometers.
+func (g *GeoSet) Distance(lat1, lon1, lat2, lon2 float64) float64 {
+	const R = 6371 // Earth radius in km
+	dLat := (lat2 - lat1) * (math.Pi / 180)
+	dLon := (lon2 - lon1) * (math.Pi / 180)
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1*(math.Pi/180))*math.Cos(lat2*(math.Pi/180))*
+			math.Sin(dLon/2)*math.Sin(dLon/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	return R * c
+}
+
+// SearchByRadius finds locations within a radius from a point.
+func (g *GeoSet) SearchByRadius(lat, lon, radius float64) []string {
+	results := []string{}
+	for _, loc := range g.Locations {
+		dist := g.Distance(lat, lon, loc.Latitude, loc.Longitude)
+		if dist <= radius {
+			results = append(results, loc.Name)
+		}
+	}
+	return results
 }

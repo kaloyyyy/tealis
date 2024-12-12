@@ -69,6 +69,8 @@ func (r *RedisClone) XRead(key string, startID string, count int) []StreamEntry 
 
 	var result []StreamEntry
 	for _, entry := range stream.Entries {
+		entryId := entry.ID
+		print(entryId)
 		if entry.ID > startID {
 			result = append(result, entry)
 			if count > 0 && len(result) >= count {

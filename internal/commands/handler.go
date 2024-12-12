@@ -557,6 +557,51 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		ids := parts[3:]
 		result := store.XAck(key, groupName, ids)
 		return fmt.Sprintf(":%d", result)
+	case "GEOADD":
+		if len(parts) < 5 || (len(parts)-2)%3 != 0 {
+			return "-ERR GEOADD requires key, longitude, latitude, and member"
+		}
+		key := parts[1]
+		for i := 2; i < len(parts); i += 3 {
+			longitude, err1 := strconv.ParseFloat(parts[i], 64)
+			latitude, err2 := strconv.ParseFloat(parts[i+1], 64)
+			member := parts[i+2]
+			if err1 != nil || err2 != nil {
+				return "-ERR Longitude and latitude must be valid floating-point numbers"
+			}
+			store.GEOAdd(key, longitude, latitude, member)
+		}
+		return ":1" // Success indicator
+
+	case "GEODIST":
+		if len(parts) < 4 || len(parts) > 5 {
+			return "-ERR GEODIST requires key, member1, member2, and an optional unit"
+		}
+		key, member1, member2 := parts[1], parts[2], parts[3]
+		// Default unit is meters
+		if len(parts) == 5 {
+
+		}
+		distance := store.GEODist(key, member1, member2)
+		return fmt.Sprintf(":%f", distance)
+
+	case "GEORADIUS":
+		if len(parts) < 6 {
+			return "-ERR GEORADIUS requires key, longitude, latitude, radius, and unit"
+		}
+		key := parts[1]
+		longitude, err1 := strconv.ParseFloat(parts[2], 64)
+		latitude, err2 := strconv.ParseFloat(parts[3], 64)
+		radius, err3 := strconv.ParseFloat(parts[4], 64)
+		if err1 != nil || err2 != nil || err3 != nil {
+			return "-ERR Longitude, latitude, and radius must be valid numbers"
+		}
+		results := store.GEOSearch(key, longitude, latitude, radius)
+		if len(results) == 0 {
+			return "(empty list or set)"
+		}
+		return formatArrayResponse(results)
+
 	default:
 		return "-ERR Unknown command"
 	}
@@ -569,7 +614,7 @@ func formatEntries(entries []storage.StreamEntry) string {
 	}
 	var sb strings.Builder
 	for _, entry := range entries {
-		sb.WriteString(fmt.Sprintf("%s: %v\n", entry.ID, entry.Fields))
+		sb.WriteString(fmt.Sprintf("%s: %v\r\n", entry.ID, entry.Fields))
 	}
 	return sb.String()
 }
