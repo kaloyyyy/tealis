@@ -78,11 +78,26 @@ func (r *RedisClone) BITOP(op string, destKey string, keys ...string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	var result []byte
+	// Check for no keys or invalid operation
+	if len(keys) == 0 {
+		panic("-ERR wrong number of arguments")
+	}
+
+	// Fetch the data for the first key to initialize the result slice
+	firstKey := keys[0]
+	result, _ := r.Store[firstKey].([]byte)
+	if result == nil {
+		panic("-ERR no such key")
+	}
+
+	// Iterate through the keys
 	for i, key := range keys {
 		data, _ := r.Store[key].([]byte)
+		if data == nil {
+			panic("-ERR no such key")
+		}
 
-		// Align the result size with the current key's data size
+		// Align the data size
 		if len(result) < len(data) {
 			newResult := make([]byte, len(data))
 			copy(newResult, result)
@@ -107,10 +122,12 @@ func (r *RedisClone) BITOP(op string, destKey string, keys ...string) {
 					panic("-ERR NOT must be applied to a single key")
 				}
 				result[j] = ^data[j]
+			default:
+				panic("-ERR unknown BITOP operation")
 			}
 		}
 	}
 
-	// Store the result in the destination key
+	// Store the result back into the destination key
 	r.Store[destKey] = result
 }
