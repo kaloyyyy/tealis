@@ -602,6 +602,60 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		}
 		return formatArrayResponse(results)
 
+	case "SETBIT":
+		if len(parts) != 4 {
+			return "-ERR wrong number of arguments for 'SETBIT' command"
+		}
+		key := parts[1]
+		offset, err := strconv.Atoi(parts[2])
+		if err != nil {
+			return "-ERR offset is not an integer"
+		}
+		value, err := strconv.Atoi(parts[3])
+		if err != nil || (value != 0 && value != 1) {
+			return "-ERR bit value is not an integer or out of range"
+		}
+		prev := store.SETBIT(key, offset, value)
+		return ":" + strconv.Itoa(prev)
+
+	case "GETBIT":
+		if len(parts) != 3 {
+			return "-ERR wrong number of arguments for 'GETBIT' command"
+		}
+		key := parts[1]
+		offset, err := strconv.Atoi(parts[2])
+		if err != nil {
+			return "-ERR offset is not an integer"
+		}
+		bit := store.GETBIT(key, offset)
+		return ":" + strconv.Itoa(bit)
+
+	case "BITCOUNT":
+		if len(parts) != 2 {
+			return "-ERR wrong number of arguments for 'BITCOUNT' command"
+		}
+		key := parts[1]
+		count := store.BITCOUNT(key)
+		return ":" + strconv.Itoa(count)
+
+	case "BITOP":
+		if len(parts) < 4 {
+			return "-ERR wrong number of arguments for 'BITOP' command"
+		}
+		op := strings.ToUpper(parts[1])
+		destKey := parts[2]
+		keys := parts[3:]
+		if op != "AND" && op != "OR" && op != "XOR" && op != "NOT" {
+			return "-ERR unknown operation"
+		}
+		if op == "NOT" && len(keys) != 1 {
+			return "-ERR NOT operation takes only one key"
+		}
+		store.BITOP(op, destKey, keys...)
+		// Return the length of the resulting key
+		result, _ := store.Store[destKey].([]byte)
+		return ":" + strconv.Itoa(len(result))
+
 	default:
 		return "-ERR Unknown command"
 	}

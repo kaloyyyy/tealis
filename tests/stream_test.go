@@ -7,9 +7,9 @@ import (
 
 func TestRedisCloneStreams(t *testing.T) {
 	store := storage.NewRedisClone()
-
+	var id string
 	t.Run("XADD - Add entry to stream", func(t *testing.T) {
-		id := store.XAdd("mystream", "*", map[string]string{"field1": "value1", "field2": "value2"})
+		id = store.XAdd("mystream", "*", map[string]string{"field1": "value1", "field2": "value2"})
 		if id == "" {
 			t.Errorf("expected a generated ID, got an empty string")
 		}
@@ -23,7 +23,7 @@ func TestRedisCloneStreams(t *testing.T) {
 	})
 
 	t.Run("XRANGE - Retrieve entries in range", func(t *testing.T) {
-		entries := store.XRange("mystream", "-", "+")
+		entries := store.XRange("mystream", "0", "999999999999999")
 		if len(entries) != 1 {
 			t.Errorf("expected 1 entry, got %d", len(entries))
 		}
@@ -50,7 +50,7 @@ func TestRedisCloneStreams(t *testing.T) {
 	})
 
 	t.Run("XACK - Acknowledge processed entries", func(t *testing.T) {
-		ackCount := store.XAck("mystream", "mygroup", []string{"0-0"})
+		ackCount := store.XAck("mystream", "mygroup", []string{id})
 		if ackCount != 1 {
 			t.Errorf("expected 1 acknowledged entry, got %d", ackCount)
 		}
