@@ -656,54 +656,22 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		result, _ := store.Store[destKey].([]byte)
 		return ":" + strconv.Itoa(len(result))
 	case "BITFIELD":
-		if len(parts) < 5 {
-			fmt.Println("-ERR wrong number of arguments")
-			return strconv.Itoa(0)
-		}
+		myKey := parts[1]
+		bitType := parts[3]
+		action := parts[2]
+		offset, _ := strconv.Atoi(parts[4])
 
-		BFcommand := parts[1]
-		BFKey := parts[2]
-		BFType := parts[3]
-
-		// Parse the list of arguments into []interface{}
-		var args []int
-		for _, s := range parts[4:] {
-			val, err := strconv.Atoi(s)
-			if err != nil {
-				fmt.Println("-ERR invalid input", err)
-				return "0"
-			}
-			args = append(args, val)
+		bfCommand := strings.ToUpper(action)
+		switch bfCommand {
+		case "SET":
+			value, _ := strconv.Atoi(parts[5])
+			result := store.SetBitfield(myKey, bitType, offset, value)
+			print(result)
+		case "GET":
+			result, _ := store.GetBitfield(myKey, bitType, offset)
+			print(result)
 		}
-
-		// Call BITFIELD with parsed input
-		result, err := store.BITFIELD(BFcommand, BFKey, BFType, args)
-		if err != nil {
-			fmt.Println(err)
-			return strconv.Itoa(0)
-		}
-
-		// Format result as multi-bulk response
-		fmt.Println("*" + strconv.Itoa(len(result)))
-		for _, res := range result {
-			fmt.Println(res)
-		}
-		var resultStrs []string
-		for _, item := range result {
-			switch v := item.(type) {
-			case int:
-				resultStrs = append(resultStrs, fmt.Sprintf("%d", v)) // Convert int to string
-			case float64:
-				resultStrs = append(resultStrs, fmt.Sprintf("%f", v)) // Convert float to string
-			case string:
-				resultStrs = append(resultStrs, v) // Already a string
-			case bool:
-				resultStrs = append(resultStrs, fmt.Sprintf("%v", v)) // Convert bool to string
-			default:
-				resultStrs = append(resultStrs, fmt.Sprintf("%v", v)) // Default case for unknown types
-			}
-		}
-		return ": " + resultStrs[0]
+		return ""
 	default:
 		return "-ERR Unknown command"
 	}
