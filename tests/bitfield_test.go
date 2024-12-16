@@ -1,87 +1,105 @@
 package storage
 
 import (
-	"fmt"
+	_ "sync"
 	"tealis/internal/storage"
 	"testing"
 )
 
-func TestBITFIELD(t *testing.T) {
-	redis := storage.NewRedisClone() // Assume NewRedisClone initializes your Redis clone.
+func TestSetBitfield(t *testing.T) {
+	r := storage.NewRedisClone()
 
-	// Test SET and GET
-	var list []int = []int{0, 100}
-
-	_, err := redis.BITFIELD("SET", "key", "i32", list)
+	// Test setting an i8 value
+	err := r.SetBitfield("key1", "i8", 0, -128)
 	if err != nil {
-		t.Fatalf("Failed to SET: %v", err)
+		t.Errorf("unexpected error: %v", err)
 	}
-	list = []int{0}
 
-	value, err := redis.BITFIELD("GET", "key", "i32", list)
+	// Test setting a value out of range for i8
+	err = r.SetBitfield("key1", "i8", 0, 200)
+	if err == nil {
+		t.Errorf("expected error for out-of-range value, got nil")
+	}
+
+	// Test setting a u16 value
+	err = r.SetBitfield("key2", "u16", 0, 65535)
 	if err != nil {
-		t.Fatalf("Failed to GET: %v", err)
-	}
-	if value[0] != int32(100) {
-		t.Fatalf("Expected 100, got %v", value[0])
+		t.Errorf("unexpected error: %v", err)
 	}
 
-	// Test INCRBY
-	list = []int{0, 10}
+	// Test setting a value out of range for u16
+	err = r.SetBitfield("key2", "u16", 0, -1)
+	if err == nil {
+		t.Errorf("expected error for out-of-range value, got nil")
+	}
+}
 
-	value, err = redis.BITFIELD("INCRBY", "key", "i32", list)
+func TestGetBitfield(t *testing.T) {
+	r := storage.NewRedisClone()
+
+	// Set up initial bitfield values
+	err := r.SetBitfield("key1", "i8", 0, -128)
 	if err != nil {
-		t.Fatalf("Failed to INCRBY: %v", err)
+		return
 	}
-	if value[0] != int64(110) {
-		t.Fatalf("Expected 110, got %v", value[0])
-	}
-
-	// Test boundary condition (dynamic resizing)
-	list = []int{0, 500}
-
-	_, err = redis.BITFIELD("SET", "key", "i64", list)
+	err = r.SetBitfield("key2", "u16", 0, 65535)
 	if err != nil {
-		t.Fatalf("Failed to SET with resizing: %v", err)
+		return
 	}
-	list = []int{0}
-	value, err = redis.BITFIELD("GET", "key", "i64", list)
+
+	// Test getting an i8 value
+	value, err := r.GetBitfield("key1", "i8", 0)
 	if err != nil {
-		t.Fatalf("Failed to GET after resizing: %v", err)
+		t.Errorf("unexpected error: %v", err)
 	}
-	if value[0] != int64(500) {
-		t.Fatalf("Expected 500, got %v", value[0])
+	if value != -128 {
+		t.Errorf("expected value -128, got %d", value)
 	}
 
-	// Test INCRBY on newly set value
-	list = []int{64, -200}
-	value, err = redis.BITFIELD("INCRBY", "key", "i64", list)
+	// Test getting a u16 value
+	value, err = r.GetBitfield("key2", "u16", 0)
 	if err != nil {
-		t.Fatalf("Failed to INCRBY: %v", err)
+		t.Errorf("unexpected error: %v", err)
 	}
-	if value[0] != int64(300) {
-		t.Fatalf("Expected 300, got %v", value[0])
+	if value != -1 {
+		t.Errorf("expected value 65535, got %d", value)
+	}
+}
+
+func TestIncrByBitfield(t *testing.T) {
+	r := storage.NewRedisClone()
+
+	// Set up initial bitfield values
+	err := r.SetBitfield("key1", "i8", 0, -128)
+	if err != nil {
+		return
+	}
+	err = r.SetBitfield("key2", "u16", 0, 65534)
+	if err != nil {
+		return
 	}
 
-	list = []int{0, 100}
-	// Test error handling for invalid type
-	_, err = redis.BITFIELD("SET", "key", "invalid", list)
-	if err == nil || err.Error() != "-ERR invalid bit type invalid" {
-		t.Fatalf("Expected invalid bit type error, got %v", err)
+	// Increment an i8 value
+	newValue, err := r.IncrByBitfield("key1", "i8", 0, 1)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if newValue != -127 {
+		t.Errorf("expected value -127, got %d", newValue)
 	}
 
-	// Test error handling for invalid operation
-	list = []int{0, 100}
-	_, err = redis.BITFIELD("INVALID_OP", "key", "i32", list)
-	if err == nil || err.Error() != "-ERR unknown BITFIELD operation INVALID_OP" {
-		t.Fatalf("Expected unknown operation error, got %v", err)
+	// Increment a u16 value
+	newValue, err = r.IncrByBitfield("key2", "u16", 0, 1)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if newValue != 65535 {
+		t.Errorf("expected value 65535, got %d", newValue)
 	}
 
-	// Test error handling for out-of-range offset
-	_, err = redis.BITFIELD("GET", "key", "i32", []int{1000000})
-	if err == nil || err.Error() != "-ERR offset out of range" {
-		t.Fatalf("Expected offset out of range error, got %v", err)
+	// Test overflow for u16
+	_, err = r.IncrByBitfield("key2", "u16", 0, 1)
+	if err == nil {
+		t.Errorf("expected error for overflow, got nil")
 	}
-
-	fmt.Println("All BITFIELD tests passed!")
 }

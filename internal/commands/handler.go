@@ -4,6 +4,7 @@ package commands
 
 import (
 	"encoding/json"
+
 	"fmt"
 	"log"
 	"strconv"
@@ -660,18 +661,79 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		bitType := parts[3]
 		action := parts[2]
 		offset, _ := strconv.Atoi(parts[4])
-
 		bfCommand := strings.ToUpper(action)
+
 		switch bfCommand {
 		case "SET":
+			// Parse the value to set
 			value, _ := strconv.Atoi(parts[5])
-			result := store.SetBitfield(myKey, bitType, offset, value)
-			print(result)
+			// Call the SetBitfield method
+			err := store.SetBitfield(myKey, bitType, offset, value)
+			if err != nil {
+				// Return an error message if the operation fails
+				return fmt.Sprintf("ERROR: %s", err.Error())
+			}
+			// Return success
+			return "OK"
+
 		case "GET":
-			result, _ := store.GetBitfield(myKey, bitType, offset)
-			print(result)
+			// Call the GetBitfield method
+			value, err := store.GetBitfield(myKey, bitType, offset)
+			if err != nil {
+				// Return an error message if the operation fails
+				return fmt.Sprintf("ERROR: %s", err.Error())
+			}
+			// Return the value as a string
+			return fmt.Sprintf("%d", value)
+
+		default:
+			// Handle unsupported commands
+			return fmt.Sprintf("ERROR: Unsupported BITFIELD action '%s'", bfCommand)
 		}
-		return ""
+	case "PFADD":
+		pfkey := parts[1]
+		pfValues := parts[2:] // Remaining parts are the values to add
+		var successCount int  // Count of successful additions, if needed
+		var err error         // To store any error from PFAdd
+
+		for _, value := range pfValues {
+			err = store.PFAdd(pfkey, value) // Call PFAdd for each value
+			if err != nil {
+				// Handle the error (log, return an error, etc.)
+				return fmt.Sprintf("%s", err) // or continue to the next value, depending on your use case
+			}
+			successCount++ // Increment count if PFAdd succeeds
+		}
+
+		return fmt.Sprintf("%d", successCount) // Return the total number of successful additions, or the result you need
+	case "PFMERGE":
+		targetKey := parts[1]   // The key to store the merged result
+		sourceKeys := parts[2:] // The list of keys to merge
+
+		// Call PFMerge to merge all source keys into the target key
+		err := store.PFMerge(targetKey, sourceKeys...)
+		if err != nil {
+			// Handle the error (log it, return an error, etc.)
+			return fmt.Sprintf("%s", err)
+		}
+
+		return "OK" // Indicating that the merge was successful
+	case "PFCOUNT":
+		keys := parts[1:] // The list of keys to count the unique elements for
+		totalCount := int64(0)
+
+		// Iterate over each key and get the approximate cardinality
+		for _, key := range keys {
+			count, err := store.PFCount(key) // Get the approximate count for each HyperLogLog key
+			if err != nil {
+				// Handle the error (log it, return an error, etc.)
+				return fmt.Sprintf("%s", err)
+			}
+			totalCount += count // Accumulate the count
+		}
+
+		return fmt.Sprintf("%d", totalCount) // Return the total approximate count as a string
+
 	default:
 		return "-ERR Unknown command"
 	}
