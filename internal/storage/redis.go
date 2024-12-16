@@ -2,25 +2,75 @@ package storage
 
 import (
 	"context"
+	"log"
 	"math"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
 
-// RedisClone represents the basic structure for a Redis-like store.
 type RedisClone struct {
-	mu       sync.RWMutex
-	Store    map[string]interface{} // Store can hold any data type (string, list, etc.)
-	expiries map[string]time.Time
+	mu           sync.RWMutex
+	Store        map[string]interface{} // Store can hold any data type (string, list, etc.)
+	expiries     map[string]time.Time
+	transactions map[string][]string // Store queued commands for each transaction
 }
 
-// NewRedisClone initializes a new RedisClone instance.
 func NewRedisClone() *RedisClone {
 	return &RedisClone{
-		Store:    make(map[string]interface{}),
-		expiries: make(map[string]time.Time),
+		Store:        make(map[string]interface{}),
+		expiries:     make(map[string]time.Time),
+		transactions: make(map[string][]string),
 	}
+}
+
+// MULTI starts a transaction.
+func (r *RedisClone) MULTI(clientID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.transactions[clientID] = []string{} // Start a new transaction for the client
+}
+
+// EXEC executes all the queued commands in a transaction.
+// EXEC executes all the queued commands in a transaction and returns their results.
+func (r *RedisClone) EXEC(clientID string) string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Check if there are queued commands for this client
+	if commands, ok := r.transactions[clientID]; ok {
+		var response []string // This will hold the responses for each command
+
+		// Iterate through each queued command and process it
+		for _, cmd := range commands {
+			// Split the command into parts (assuming it's space-separated, e.g., SET key value)
+			parts := strings.Fields(cmd)
+
+			// Process the command and capture the response
+			responseStr := ProcessCommand(parts, r, clientID)
+			response = append(response, responseStr)
+
+			// Log the command execution
+			log.Printf("Executing command in transaction: %s, Response: %s", cmd, responseStr)
+		}
+
+		// After executing, clear the transaction for the client
+		delete(r.transactions, clientID)
+
+		// Return all responses in the transaction, joined by a newline
+		return strings.Join(response, "\r\n") + "\r\n"
+	}
+
+	// If no transaction was started, return an error
+	return "-ERR No transaction started\r\n"
+}
+
+// DISCARD discards all the queued commands in the transaction.
+func (r *RedisClone) DISCARD(clientID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.transactions, clientID)
 }
 
 // StartCleanup periodically cleans expired keys.
@@ -43,6 +93,16 @@ func (r *RedisClone) StartCleanup(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+// EX sets the expiry time for a given key.
+// The duration argument is the time duration after which the key will expire.
+func (r *RedisClone) EX(key string, duration time.Duration) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	expiryTime := time.Now().Add(duration)
+	r.expiries[key] = expiryTime
 }
 
 func (r *RedisClone) ZAdd(key string, score float64, member string) int {

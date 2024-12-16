@@ -1,6 +1,6 @@
 // in your commands package (e.g., awesomeProject/internal/commands/handler.go)
 
-package commands
+package storage
 
 import (
 	"encoding/json"
@@ -9,17 +9,25 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"tealis/internal/storage"
 	"time"
 )
 
-func ProcessCommand(parts []string, store *storage.RedisClone) string {
+func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 	if len(parts) == 0 {
 		return "-ERR Empty command"
 	}
 
 	command := strings.ToUpper(parts[0])
 	switch command {
+	case "MULTI":
+		store.MULTI(clientID)
+		return "+OK\r\n"
+	case "EXEC":
+		return store.EXEC(clientID)
+	case "DISCARD":
+		store.DISCARD(clientID)
+		return "+OK\r\n"
+	// other cases for different commands (GET, SET, etc.)
 	case "SET":
 		if len(parts) < 3 {
 			return "-ERR SET requires key and value"
@@ -70,6 +78,21 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 
 	case "QUIT":
 		return "+OK"
+
+	case "EX":
+		if len(parts) < 2 {
+			return "ERR: EX command requires a key and a duration"
+		}
+
+		// Convert the second part to a float representing the time duration
+		duration, err := strconv.ParseFloat(parts[1], 64)
+		if err != nil {
+			return fmt.Sprintf("ERR: invalid duration: %v", err)
+		}
+
+		// Set expiry using the EX method (duration is in seconds, so we multiply by time.Second)
+		store.EX(parts[0], time.Duration(duration*float64(time.Second)))
+		return "OK" // Success message
 
 	case "APPEND":
 		if len(parts) < 3 {
@@ -733,14 +756,90 @@ func ProcessCommand(parts []string, store *storage.RedisClone) string {
 		}
 
 		return fmt.Sprintf("%d", totalCount) // Return the total approximate count as a string
+	case "TS.CREATE":
+		if len(parts) < 3 {
+			return "-ERR TS.CREATE requires key and aggregation method"
+		}
+		key := parts[1]
+		aggregation := strings.ToLower(parts[2])
+		if aggregation != "avg" && aggregation != "min" && aggregation != "max" {
+			return "-ERR Invalid aggregation method. Choose 'avg', 'min', or 'max'."
+		}
+		err := store.TSCreate(key, aggregation)
+		if err != nil {
+			return fmt.Sprintf("-ERR %s", err)
+		}
+		return "+OK"
 
+	case "TS.ADD":
+		if len(parts) < 4 {
+			return "-ERR TS.ADD requires key, timestamp, and value"
+		}
+		key := parts[1]
+		timestampSecs, err := strconv.Atoi(parts[2])
+		if err != nil {
+			return "-ERR Invalid timestamp"
+		}
+		timestamp := time.Unix(int64(timestampSecs), 0)
+		value, err := strconv.ParseFloat(parts[3], 64)
+		if err != nil {
+			return "-ERR Invalid value"
+		}
+		err = store.TSAdd(key, timestamp, value)
+		if err != nil {
+			return fmt.Sprintf("-ERR %s", err)
+		}
+		return "+OK"
+
+	case "TS.RANGE":
+		if len(parts) < 4 {
+			return "-ERR TS.RANGE requires key, start, and end timestamps"
+		}
+		key := parts[1]
+		startSecs, err := strconv.Atoi(parts[2])
+		if err != nil {
+			return "-ERR Invalid start timestamp"
+		}
+		start := time.Unix(int64(startSecs), 0)
+
+		endSecs, err := strconv.Atoi(parts[3])
+		if err != nil {
+			return "-ERR Invalid end timestamp"
+		}
+		end := time.Unix(int64(endSecs), 0)
+
+		dataPoints, err := store.TSRange(key, start, end)
+		if err != nil {
+			return fmt.Sprintf("-ERR %s", err)
+		}
+
+		if len(dataPoints) == 0 {
+			return "$-1"
+		}
+
+		var response string
+		for _, dp := range dataPoints {
+			response += fmt.Sprintf("%d %f\r\n", dp.Timestamp.Unix(), dp.Value)
+		}
+		return "$" + strconv.Itoa(len(response)) + "\r\n" + response
+
+	case "TS.GET":
+		if len(parts) < 2 {
+			return "-ERR TS.GET requires key"
+		}
+		key := parts[1]
+		latest, err := store.TSGet(key)
+		if err != nil {
+			return fmt.Sprintf("-ERR %s", err)
+		}
+		return fmt.Sprintf("%d %f\r\n", latest.Timestamp.Unix(), latest.Value)
 	default:
 		return "-ERR Unknown command"
 	}
 }
 
 // formatEntries converts stream entries into a string representation.
-func formatEntries(entries []storage.StreamEntry) string {
+func formatEntries(entries []StreamEntry) string {
 	if len(entries) == 0 {
 		return "(empty list or set)"
 	}
