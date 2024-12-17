@@ -2,9 +2,9 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math"
-	"net"
 	"sort"
 	"strings"
 	"sync"
@@ -17,7 +17,7 @@ type RedisClone struct {
 	expiries          map[string]time.Time
 	transactions      map[string][]string               // Store queued commands for each transaction
 	pubsubSubscribers map[string]map[string]chan string // channel -> clientID -> message channel
-	ClientConnections map[string]net.Conn               // clientID -> connection
+	ClientConnections map[string]interface{}            // clientID -> connection (can be net.Conn or *websocket.Conn)
 	mockClients       map[string]*MockClientConnection
 }
 
@@ -27,7 +27,7 @@ func NewRedisClone() *RedisClone {
 		expiries:          make(map[string]time.Time),
 		transactions:      make(map[string][]string),
 		pubsubSubscribers: make(map[string]map[string]chan string),
-		ClientConnections: make(map[string]net.Conn),
+		ClientConnections: make(map[string]interface{}), // Change this to use interface{}
 		mockClients:       make(map[string]*MockClientConnection),
 	}
 }
@@ -246,8 +246,13 @@ func (g *GeoSet) SearchByRadius(lat, lon, radius float64) []string {
 	return results
 }
 
-func (r *RedisClone) GetClientConnection(clientID string) net.Conn {
+func (r *RedisClone) GetClientConnection(clientID string) (interface{}, error) {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
-	return r.ClientConnections[clientID]
+
+	conn, exists := r.ClientConnections[clientID]
+	if !exists {
+		return nil, fmt.Errorf("client %s not found", clientID)
+	}
+	return conn, nil
 }

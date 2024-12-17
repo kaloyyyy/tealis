@@ -2,7 +2,9 @@ package storage
 
 import (
 	"fmt"
+	"github.com/gorilla/websocket"
 	"log"
+	"net"
 )
 
 // Subscribe adds a client to a channel's subscriber list.
@@ -62,20 +64,23 @@ func (r *RedisClone) Publish(channel, message string) string {
 
 // deliverMessages sends messages from a channel to a client.
 func (r *RedisClone) deliverMessages(clientID string, msgChan chan string) {
+	log.Printf("delivering messages to %s in chan: %v", clientID, msgChan)
 	for msg := range msgChan {
-		// Check if the client is a real connection
-		if conn, ok := r.ClientConnections[clientID]; ok {
+		// Check if the client is a WebSocket connection
+		if conn, ok := r.ClientConnections[clientID].(*websocket.Conn); ok {
+			// Send message to WebSocket client
+			err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
+			if err != nil {
+				log.Printf("Error delivering message to WebSocket client %s: %v", clientID, err)
+			}
+		} else if conn, ok := r.ClientConnections[clientID].(net.Conn); ok {
+			// Send message to regular TCP client
 			_, err := conn.Write([]byte(msg + "\r\n"))
 			if err != nil {
-				log.Printf("Error delivering message to %s: %v", clientID, err)
+				log.Printf("Error delivering message to TCP client %s: %v", clientID, err)
 			}
-		} else if mockClient, ok := r.mockClients[clientID]; ok {
-			// For mock clients, write to the Outbox
-			select {
-			case mockClient.Outbox <- msg:
-			default:
-				log.Printf("Mock client %s Outbox is full, dropping message", clientID)
-			}
+		} else {
+			log.Printf("Client %s is neither WebSocket nor TCP, skipping message delivery", clientID)
 		}
 	}
 }

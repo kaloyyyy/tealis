@@ -31,7 +31,12 @@ func websocketHandler(store *storage.RedisClone, w http.ResponseWriter, r *http.
 
 	// Get the client ID (address of the WebSocket connection)
 	clientID := conn.RemoteAddr().String()
-	log.Printf("New WebSocket client connected: %s", clientID)
+
+	// Add the WebSocket client to ClientConnections map
+	store.Mu.Lock()
+	store.ClientConnections[clientID] = conn
+	store.Mu.Unlock()
+
 	// Handle incoming WebSocket messages
 	for {
 		// Read message from client
@@ -55,6 +60,25 @@ func websocketHandler(store *storage.RedisClone, w http.ResponseWriter, r *http.
 			break
 		}
 	}
+
+	// Clean up on client disconnect
+	store.Mu.Lock()
+	delete(store.ClientConnections, clientID)
+	store.Mu.Unlock()
+}
+
+func serveFrontend() {
+	// Create a file server to serve static files from the "public" directory
+	fileServer := http.FileServer(http.Dir("./public"))
+
+	// Add logging for incoming requests and serve the files
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Serving request: %s", r.URL.Path)
+		fileServer.ServeHTTP(w, r)
+	})
+
+	log.Println("Frontend server is running on port 8000...")
+	log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
 func main() {
@@ -66,15 +90,20 @@ func main() {
 
 	// Start background cleanup task for expired keys
 	store.StartCleanup(ctx)
+
+	// Start WebSocket server on a separate goroutine (e.g., 8080)
 	go func() {
-		// Start WebSocket server on a separate port (e.g., 8080)
 		http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 			websocketHandler(store, w, r)
 		})
 		log.Println("WebSocket server is running on port 8080...")
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
-	// Set up a listener on port 6379
+
+	// Start HTTP server for the frontend on port 8081
+	go serveFrontend()
+
+	// Set up a listener on port 6379 for the Redis clone
 	listener, err := net.Listen("tcp", ":6379")
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
@@ -84,11 +113,12 @@ func main() {
 	// Log that the server is running
 	log.Println("Redis clone is running on port 6379...")
 	log.Println("use `telnet 127.0.0.1 6379` to connect")
+
 	// Graceful shutdown setup
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start accepting connections in a separate goroutine
+	// Start accepting connections for Redis clone
 	go acceptConnections(listener, store)
 
 	// Block until we receive a shutdown signal
@@ -116,7 +146,6 @@ func acceptConnections(listener net.Listener, store *storage.RedisClone) {
 
 func handleConnectionWithRead(conn net.Conn, store *storage.RedisClone, clientAddr string) {
 	// Create a buffer to read data from the connection
-
 	buf := make([]byte, 1024) // buffer to hold data from client
 	var input []byte          // the full command input from the client
 
