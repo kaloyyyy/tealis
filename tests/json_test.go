@@ -1,14 +1,18 @@
 package storage
 
 import (
+	"os"
 	"reflect"
 	"tealis/internal/storage"
 	"testing"
 )
 
 func TestJSONDel(t *testing.T) {
-	r := storage.NewRedisClone() // Your Redis clone initialization
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
+	// Initialize a RedisClone instance with AOF enabled
+	r := storage.NewRedisClone(aofFilePath, "", true)
 	key := "testKey"
 	data := `{"key1": "value1", "nested": {"key2": "value2"}}`
 	err := r.JSONSet(key, ".", data)

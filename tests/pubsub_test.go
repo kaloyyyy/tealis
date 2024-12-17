@@ -1,13 +1,18 @@
 package storage_test
 
 import (
+	"os"
 	"tealis/internal/storage"
 	"testing"
 	"time"
 )
 
 func TestPubSub(t *testing.T) {
-	store := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "/snapshot", true)
 	channel := "test-channel"
 
 	// Simulate a client connection for testing
@@ -56,7 +61,11 @@ func TestPubSub(t *testing.T) {
 }
 
 func TestMultipleSubscribers(t *testing.T) {
-	store := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "", true)
 	channel := "test-channel"
 
 	// Add multiple mock clients

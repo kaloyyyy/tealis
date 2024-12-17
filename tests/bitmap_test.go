@@ -1,12 +1,17 @@
 package storage
 
 import (
+	"os"
 	"tealis/internal/storage"
 	"testing"
 )
 
 func TestBitFunctions(t *testing.T) {
-	r := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	r := storage.NewRedisClone(aofFilePath, "", true)
 	key1 := "key1"
 	key3 := "key3"
 	destKey := "dest"

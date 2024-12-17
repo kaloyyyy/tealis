@@ -78,7 +78,7 @@ func (r *RedisClone) JSONDel(key string, path string) error {
 	if path == "" || path == "." {
 		if _, exists := r.Store[key]; exists {
 			delete(r.Store, key)
-			delete(r.expiries, key)
+			delete(r.Expiries, key)
 			return nil
 		}
 		return nil

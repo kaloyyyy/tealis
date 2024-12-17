@@ -1,10 +1,13 @@
 package storage
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -14,22 +17,50 @@ import (
 type RedisClone struct {
 	Mu                sync.RWMutex
 	Store             map[string]interface{} // Store can hold any data type (string, list, etc.)
-	expiries          map[string]time.Time
+	Expiries          map[string]time.Time
 	transactions      map[string][]string               // Store queued commands for each transaction
 	pubsubSubscribers map[string]map[string]chan string // channel -> clientID -> message channel
 	ClientConnections map[string]interface{}            // clientID -> connection (can be net.Conn or *websocket.Conn)
 	mockClients       map[string]*MockClientConnection
+
+	// Persistence options
+	AofFile       *os.File // Append-Only File
+	aofFilePath   string   // Path to the AOF file
+	enableAOF     bool     // Flag to enable/disable AOF
+	snapshotPath  string   // Path to the snapshot file
+	snapshotMutex sync.Mutex
 }
 
-func NewRedisClone() *RedisClone {
-	return &RedisClone{
+func NewRedisClone(aofFilePath, snapshotPath string, enableAOF bool) *RedisClone {
+	r := &RedisClone{
 		Store:             make(map[string]interface{}),
-		expiries:          make(map[string]time.Time),
+		Expiries:          make(map[string]time.Time),
 		transactions:      make(map[string][]string),
 		pubsubSubscribers: make(map[string]map[string]chan string),
-		ClientConnections: make(map[string]interface{}), // Change this to use interface{}
+		ClientConnections: make(map[string]interface{}),
 		mockClients:       make(map[string]*MockClientConnection),
+		aofFilePath:       aofFilePath,
+		enableAOF:         enableAOF,
+		snapshotPath:      snapshotPath,
 	}
+
+	// Open AOF file if enabled
+	if enableAOF {
+		// Ensure the directory for the snapshot exists
+		dir := r.snapshotPath
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			_ = fmt.Errorf("failed to create directory for snapshot: %w, path: %s", err, dir)
+		}
+		aofFile, err := os.OpenFile(snapshotPath+"/"+aofFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("Failed to open AOF file: %v", err)
+		}
+		r.AofFile = aofFile
+		r.loadAOF()
+	}
+	// Start cleanup after loading AOF
+	go r.StartCleanup(context.Background())
+	return r
 }
 
 type MockClientConnection struct {
@@ -94,10 +125,10 @@ func (r *RedisClone) StartCleanup(ctx context.Context) {
 			case <-time.After(time.Second):
 				now := time.Now()
 				r.Mu.Lock()
-				for key, expiry := range r.expiries {
+				for key, expiry := range r.Expiries {
 					if now.After(expiry) {
 						delete(r.Store, key)
-						delete(r.expiries, key)
+						delete(r.Expiries, key)
 					}
 				}
 				r.Mu.Unlock()
@@ -113,7 +144,120 @@ func (r *RedisClone) EX(key string, duration time.Duration) {
 	defer r.Mu.Unlock()
 
 	expiryTime := time.Now().Add(duration)
-	r.expiries[key] = expiryTime
+	r.Expiries[key] = expiryTime
+}
+
+// AppendToAOF writes a command to the AOF log.
+func (r *RedisClone) AppendToAOF(command string) {
+	if !r.enableAOF || r.AofFile == nil {
+		return
+	}
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+	_, err := r.AofFile.WriteString(command + "\n")
+	if err != nil {
+		log.Printf("Error writing to AOF: %v", err)
+	}
+}
+
+// SaveSnapshot creates a snapshot of the current state of the database.
+func (r *RedisClone) SaveSnapshot() error {
+	r.snapshotMutex.Lock()
+	defer r.snapshotMutex.Unlock()
+
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
+
+	// Validate snapshot path
+	if r.snapshotPath == "" {
+		return fmt.Errorf("snapshot path is not set")
+	}
+
+	// Ensure the directory for the snapshot exists
+	dir := r.snapshotPath
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory for snapshot: %w, path: %s", err, dir)
+	}
+
+	// Serialize the state to a JSON file
+	file, err := os.Create(dir + "/" + r.aofFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to create snapshot file: %w, file loc: %s", err, r.snapshotPath)
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	state := map[string]interface{}{
+		"store":    r.Store,
+		"expiries": r.Expiries,
+	}
+	if err := encoder.Encode(state); err != nil {
+		return fmt.Errorf("failed to encode snapshot: %w", err)
+	}
+
+	return nil
+}
+
+// LoadSnapshot loads the state from a snapshot file.
+func (r *RedisClone) LoadSnapshot() error {
+	r.snapshotMutex.Lock()
+	defer r.snapshotMutex.Unlock()
+
+	file, err := os.Open(r.snapshotPath + "/" + r.aofFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to open snapshot file: %w", err)
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	state := map[string]interface{}{}
+	if err := decoder.Decode(&state); err != nil {
+		return fmt.Errorf("failed to decode snapshot: %w", err)
+	}
+
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+
+	// Restore state
+	if store, ok := state["store"].(map[string]interface{}); ok {
+		r.Store = store
+	}
+	if expiries, ok := state["expiries"].(map[string]interface{}); ok {
+		r.Expiries = make(map[string]time.Time)
+		for k, v := range expiries {
+			if t, err := time.Parse(time.RFC3339, v.(string)); err == nil {
+				r.Expiries[k] = t
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadAOF replays commands from the AOF file to restore the database state.
+func (r *RedisClone) loadAOF() {
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+
+	file, err := os.Open(r.aofFilePath)
+	if err != nil {
+		log.Printf("Error loading AOF file: %v", err)
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		command := scanner.Text()
+		parts := strings.Fields(command)
+		if len(parts) > 0 {
+			ProcessCommand(parts, r, "AOFLoader")
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Printf("Error reading AOF file: %v", err)
+	}
 }
 
 func (r *RedisClone) ZAdd(key string, score float64, member string) int {
@@ -255,4 +399,19 @@ func (r *RedisClone) GetClientConnection(clientID string) (interface{}, error) {
 		return nil, fmt.Errorf("client %s not found", clientID)
 	}
 	return conn, nil
+}
+
+func (r *RedisClone) StartSnapshotScheduler(ctx context.Context, interval time.Duration) {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(interval):
+				if err := r.SaveSnapshot(); err != nil {
+					log.Printf("Error saving snapshot: %v", err)
+				}
+			}
+		}
+	}()
 }

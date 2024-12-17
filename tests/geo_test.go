@@ -1,12 +1,18 @@
 package storage_test
 
 import (
+	"os"
 	"tealis/internal/storage"
 	"testing"
 )
 
 func TestGeoCommands(t *testing.T) {
-	store := storage.NewRedisClone()
+	// Setup
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "", true)
 
 	// Test GEOAdd
 	t.Run("GEOAdd", func(t *testing.T) {

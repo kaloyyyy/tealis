@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"os"
 	_ "strconv"
 
 	_ "tealis/internal/protocol"
@@ -12,8 +13,11 @@ import (
 )
 
 func TestSetGet(t *testing.T) {
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	store := storage.NewRedisClone()
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "", true)
 
 	// Test setting a key-value pair
 	store.Set("key1", "value1", 0)
@@ -28,8 +32,11 @@ func TestSetGet(t *testing.T) {
 }
 
 func TestSetWithTTL(t *testing.T) {
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	store := storage.NewRedisClone()
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "", true)
 
 	// Create a cancellable context for cleanup
 	ctx, cancel := context.WithCancel(context.Background())
@@ -51,7 +58,11 @@ func TestSetWithTTL(t *testing.T) {
 }
 
 func TestDel(t *testing.T) {
-	store := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "", true)
 
 	// Set and delete a key
 	store.Set("key3", "value3", 0)
@@ -64,7 +75,11 @@ func TestDel(t *testing.T) {
 }
 
 func TestExists(t *testing.T) {
-	store := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "", true)
 
 	// Set a key and check if it exists
 	store.Set("key4", "value4", 0)
@@ -77,7 +92,11 @@ func TestExists(t *testing.T) {
 }
 
 func TestAppend(t *testing.T) {
-	store := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "", true)
 
 	// Test appending to a key
 	store.Set("key5", "hello", 0)
@@ -94,7 +113,11 @@ func TestAppend(t *testing.T) {
 }
 
 func TestStrLen(t *testing.T) {
-	store := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "", true)
 
 	// Test string length
 	store.Set("key7", "some value", 0)
@@ -107,7 +130,11 @@ func TestStrLen(t *testing.T) {
 }
 
 func TestIncrBy(t *testing.T) {
-	store := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "", true)
 
 	// Test INCRBY with an existing integer key
 	store.Set("key8", "5", 0)
@@ -127,8 +154,11 @@ func TestIncrBy(t *testing.T) {
 }
 
 func TestDecrBy(t *testing.T) {
-	store := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "", true)
 	// Test DECRBY with an existing integer key
 	store.Set("key11", "5", 0)
 	newValue, err := store.IncrBy("key11", -2)
@@ -142,8 +172,11 @@ func TestDecrBy(t *testing.T) {
 }
 
 func TestGetRange(t *testing.T) {
-	store := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "", true)
 	// Set a string value
 	store.Set("key13", "Hello World", 0)
 
@@ -161,8 +194,11 @@ func TestGetRange(t *testing.T) {
 }
 
 func TestSetRange(t *testing.T) {
-	store := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
+	// Initialize a RedisClone instance with AOF enabled
+	store := storage.NewRedisClone(aofFilePath, "", true)
 	// Test 1: Basic SETRANGE functionality
 	store.Set("key1", "Hello", 0)
 	// Set the range at index 6 with the value "Go"

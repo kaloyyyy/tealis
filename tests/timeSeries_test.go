@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"os"
 	"tealis/internal/storage"
 	"testing"
 	"time"
@@ -8,7 +9,11 @@ import (
 
 func TestTimeSeries(t *testing.T) {
 	// Initialize a new Redis clone instance
-	r := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	r := storage.NewRedisClone(aofFilePath, "", true)
 
 	// Test TS.CREATE
 	err := r.TSCreate("temperature", "avg")
@@ -81,8 +86,11 @@ func TestTimeSeries(t *testing.T) {
 }
 
 func TestTimeSeriesDownsamplingMinMax(t *testing.T) {
-	r := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
+	// Initialize a RedisClone instance with AOF enabled
+	r := storage.NewRedisClone(aofFilePath, "", true)
 	// Create time series with different aggregation methods
 	err := r.TSCreate("temperature_avg", "avg")
 	if err != nil {

@@ -1,13 +1,19 @@
 package storage
 
 import (
+	"os"
 	_ "sync"
 	"tealis/internal/storage"
 	"testing"
 )
 
 func TestSetBitfield(t *testing.T) {
-	r := storage.NewRedisClone()
+	// Setup
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	r := storage.NewRedisClone(aofFilePath, "", true)
 
 	// Test setting an i8 value
 	err := r.SetBitfield("key1", "i8", 0, -128)
@@ -35,8 +41,11 @@ func TestSetBitfield(t *testing.T) {
 }
 
 func TestGetBitfield(t *testing.T) {
-	r := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
+	// Initialize a RedisClone instance with AOF enabled
+	r := storage.NewRedisClone(aofFilePath, "", true)
 	// Set up initial bitfield values
 	err := r.SetBitfield("key1", "i8", 0, -128)
 	if err != nil {
@@ -67,8 +76,11 @@ func TestGetBitfield(t *testing.T) {
 }
 
 func TestIncrByBitfield(t *testing.T) {
-	r := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
+	// Initialize a RedisClone instance with AOF enabled
+	r := storage.NewRedisClone(aofFilePath, "", true)
 	// Set up initial bitfield values
 	err := r.SetBitfield("key1", "i8", 0, -128)
 	if err != nil {

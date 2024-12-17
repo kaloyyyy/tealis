@@ -15,9 +15,9 @@ func (r *RedisClone) Set(key, value string, ttl time.Duration) {
 
 	r.Store[key] = value
 	if ttl > 0 {
-		r.expiries[key] = time.Now().Add(ttl)
+		r.Expiries[key] = time.Now().Add(ttl)
 	} else {
-		delete(r.expiries, key)
+		delete(r.Expiries, key)
 	}
 }
 
@@ -26,10 +26,10 @@ func (r *RedisClone) Get(key string) (string, bool) {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
-	if expiry, exists := r.expiries[key]; exists && time.Now().After(expiry) {
+	if expiry, exists := r.Expiries[key]; exists && time.Now().After(expiry) {
 		r.Mu.Lock()
 		delete(r.Store, key)
-		delete(r.expiries, key)
+		delete(r.Expiries, key)
 		r.Mu.Unlock()
 		return "", false
 	}
@@ -48,7 +48,7 @@ func (r *RedisClone) Del(key string) bool {
 
 	if _, exists := r.Store[key]; exists {
 		delete(r.Store, key)
-		delete(r.expiries, key)
+		delete(r.Expiries, key)
 		return true
 	}
 	return false

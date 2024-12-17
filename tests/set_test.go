@@ -1,13 +1,17 @@
 package storage
 
 import (
+	"os"
 	"tealis/internal/storage"
 	"testing"
 )
 
 func TestRedisCloneSetOperations(t *testing.T) {
-	r := storage.NewRedisClone()
+	aofFilePath := "test.aof"
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
+	// Initialize a RedisClone instance with AOF enabled
+	r := storage.NewRedisClone(aofFilePath, "", true)
 	// Test SADD
 	t.Run("SADD", func(t *testing.T) {
 		length := r.SADD("myset", "a", "b", "c", "d")
