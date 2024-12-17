@@ -64,14 +64,19 @@ func acceptConnections(listener net.Listener, store *storage.RedisClone) {
 
 func handleConnectionWithRead(conn net.Conn, store *storage.RedisClone, clientAddr string) {
 	// Create a buffer to read data from the connection
+
 	buf := make([]byte, 1024) // buffer to hold data from client
 	var input []byte          // the full command input from the client
 
 	clientID := clientAddr // For simplicity, use the client's address as the ID
-
+	store.mu.Lock()
+	store.ClientConnections[clientID] = conn
+	store.mu.Unlock()
 	defer func() {
-		// Log when the client disconnects
 		log.Printf("Client %s disconnected.", clientAddr)
+		store.mu.Lock()
+		delete(store.ClientConnections, clientID)
+		store.mu.Unlock()
 		conn.Close()
 	}()
 

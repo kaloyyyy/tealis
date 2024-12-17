@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"math"
+	"net"
 	"sort"
 	"strings"
 	"sync"
@@ -11,18 +12,28 @@ import (
 )
 
 type RedisClone struct {
-	mu           sync.RWMutex
-	Store        map[string]interface{} // Store can hold any data type (string, list, etc.)
-	expiries     map[string]time.Time
-	transactions map[string][]string // Store queued commands for each transaction
+	mu                sync.RWMutex
+	Store             map[string]interface{} // Store can hold any data type (string, list, etc.)
+	expiries          map[string]time.Time
+	transactions      map[string][]string               // Store queued commands for each transaction
+	pubsubSubscribers map[string]map[string]chan string // channel -> clientID -> message channel
+	ClientConnections map[string]net.Conn               // clientID -> connection
+	mockClients       map[string]*MockClientConnection
 }
 
 func NewRedisClone() *RedisClone {
 	return &RedisClone{
-		Store:        make(map[string]interface{}),
-		expiries:     make(map[string]time.Time),
-		transactions: make(map[string][]string),
+		Store:             make(map[string]interface{}),
+		expiries:          make(map[string]time.Time),
+		transactions:      make(map[string][]string),
+		pubsubSubscribers: make(map[string]map[string]chan string),
+		ClientConnections: make(map[string]net.Conn),
+		mockClients:       make(map[string]*MockClientConnection),
 	}
+}
+
+type MockClientConnection struct {
+	Outbox chan string // Simulates the client's ability to receive messages
 }
 
 // MULTI starts a transaction.
@@ -233,4 +244,10 @@ func (g *GeoSet) SearchByRadius(lat, lon, radius float64) []string {
 		}
 	}
 	return results
+}
+
+func (r *RedisClone) GetClientConnection(clientID string) net.Conn {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.ClientConnections[clientID]
 }

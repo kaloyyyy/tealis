@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/stretchr/testify/assert"
 	_ "strconv"
-	_ "tealis/internal/commands"
+
 	_ "tealis/internal/protocol"
 	"tealis/internal/storage"
 	"testing"

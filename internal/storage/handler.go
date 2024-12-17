@@ -833,6 +833,29 @@ func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 			return fmt.Sprintf("-ERR %s", err)
 		}
 		return fmt.Sprintf("%d %f\r\n", latest.Timestamp.Unix(), latest.Value)
+
+	case "SUBSCRIBE":
+		if len(parts) < 2 {
+			return "-ERR Missing channel name\r\n"
+		}
+		channel := parts[1]
+		return store.Subscribe(clientID, channel)
+
+	case "UNSUBSCRIBE":
+		if len(parts) < 2 {
+			return "-ERR Missing channel name\r\n"
+		}
+		channel := parts[1]
+		return store.Unsubscribe(clientID, channel)
+
+	case "PUBLISH":
+		if len(parts) < 3 {
+			return "-ERR Missing channel or message\r\n"
+		}
+		channel := parts[1]
+		message := strings.Join(parts[2:], " ")
+		return store.Publish(channel, message)
+
 	default:
 		return "-ERR Unknown command"
 	}
