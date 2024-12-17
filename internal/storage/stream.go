@@ -30,8 +30,8 @@ type Consumer struct {
 
 // XAdd adds an entry to the stream.
 func (r *RedisClone) XAdd(key string, id string, fields map[string]string) string {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	stream, ok := r.Store[key].(*Stream)
 	if !ok {
@@ -56,8 +56,8 @@ func (r *RedisClone) XAdd(key string, id string, fields map[string]string) strin
 
 // XRead reads entries from streams.
 func (r *RedisClone) XRead(key string, startID string, count int) []StreamEntry {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	stream, ok := r.Store[key].(*Stream)
 	if !ok {
@@ -83,8 +83,8 @@ func (r *RedisClone) XRead(key string, startID string, count int) []StreamEntry 
 
 // XRange retrieves entries within a range.
 func (r *RedisClone) XRange(key, startID, endID string) []StreamEntry {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	stream, ok := r.Store[key].(*Stream)
 	if !ok {
@@ -105,8 +105,8 @@ func (r *RedisClone) XRange(key, startID, endID string) []StreamEntry {
 
 // XLen returns the length of the stream.
 func (r *RedisClone) XLen(key string) int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	stream, ok := r.Store[key].(*Stream)
 	if !ok {
@@ -123,8 +123,8 @@ func (r *RedisClone) XLen(key string) int {
 
 // XGroupCreate CREATE creates a consumer group.
 func (r *RedisClone) XGroupCreate(key, groupName string) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	stream, ok := r.Store[key].(*Stream)
 	if !ok {
@@ -147,8 +147,8 @@ func (r *RedisClone) XGroupCreate(key, groupName string) bool {
 
 // XReadGroup reads entries for a consumer in a group.
 func (r *RedisClone) XReadGroup(key, groupName, consumerName, startID string, count int) []StreamEntry {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	stream, ok := r.Store[key].(*Stream)
 	if !ok {
@@ -185,8 +185,8 @@ func (r *RedisClone) XReadGroup(key, groupName, consumerName, startID string, co
 
 // XAck acknowledges messages for a consumer group.
 func (r *RedisClone) XAck(key, groupName string, ids []string) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	stream, ok := r.Store[key].(*Stream)
 	if !ok {

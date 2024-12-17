@@ -8,8 +8,8 @@ import (
 
 // RPUSH appends one or more values to the end of a list.
 func (r *RedisClone) RPUSH(key string, values ...string) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Initialize the list if not already created
 	if _, exists := r.Store[key]; !exists {
@@ -24,8 +24,8 @@ func (r *RedisClone) RPUSH(key string, values ...string) int {
 
 // LPUSH prepends one or more values to the beginning of a list.
 func (r *RedisClone) LPUSH(key string, values ...string) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Initialize the list if not already created
 	if _, exists := r.Store[key]; !exists {
@@ -40,8 +40,8 @@ func (r *RedisClone) LPUSH(key string, values ...string) int {
 
 // LPOP removes and returns the first element of the list.
 func (r *RedisClone) LPOP(key string) (string, bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	list, exists := r.Store[key].([]string)
 	if !exists || len(list) == 0 {
@@ -55,8 +55,8 @@ func (r *RedisClone) LPOP(key string) (string, bool) {
 
 // RPOP removes and returns the last element of the list.
 func (r *RedisClone) RPOP(key string) (string, bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	list, exists := r.Store[key].([]string)
 	if !exists || len(list) == 0 {
@@ -70,8 +70,8 @@ func (r *RedisClone) RPOP(key string) (string, bool) {
 
 // LRANGE returns a slice of elements in the list within the specified range.
 func (r *RedisClone) LRANGE(key string, start, stop int) []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	list, exists := r.Store[key].([]string)
 	if !exists {
@@ -103,8 +103,8 @@ func (r *RedisClone) LRANGE(key string, start, stop int) []string {
 
 // LLEN retrieves the length of the list stored at the given key.
 func (r *RedisClone) LLEN(key string) int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	// Check if the key exists in the store.
 	value, exists := r.Store[key]

@@ -7,8 +7,8 @@ import (
 
 // Subscribe adds a client to a channel's subscriber list.
 func (r *RedisClone) Subscribe(clientID, channel string) string {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	if _, exists := r.pubsubSubscribers[channel]; !exists {
 		r.pubsubSubscribers[channel] = make(map[string]chan string)
@@ -24,8 +24,8 @@ func (r *RedisClone) Subscribe(clientID, channel string) string {
 
 // Unsubscribe removes a client from a channel's subscriber list.
 func (r *RedisClone) Unsubscribe(clientID, channel string) string {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	if subs, exists := r.pubsubSubscribers[channel]; exists {
 		if msgChan, ok := subs[clientID]; ok {
@@ -41,8 +41,8 @@ func (r *RedisClone) Unsubscribe(clientID, channel string) string {
 
 // Publish sends a message to all subscribers of a channel.
 func (r *RedisClone) Publish(channel, message string) string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	subscribers, exists := r.pubsubSubscribers[channel]
 	if !exists {
@@ -85,13 +85,13 @@ func NewMockClientConnection() *MockClientConnection {
 }
 
 func (r *RedisClone) AddMockClientConnection(clientID string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 	r.mockClients[clientID] = NewMockClientConnection()
 }
 
 func (r *RedisClone) GetMockClientConnection(clientID string) *MockClientConnection {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 	return r.mockClients[clientID]
 }

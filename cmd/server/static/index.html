@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Tealis Frontend</title>
+   <style>
+       body {
+           font-family: Arial, sans-serif;
+           margin: 20px;
+       }
+       #response {
+           border: 1px solid #ccc;
+           padding: 10px;
+           height: 200px;
+           overflow-y: auto;
+           margin-top: 20px;
+       }
+       input {
+           width: calc(100% - 100px);
+           padding: 10px;
+           margin-right: 10px;
+       }
+       button {
+           padding: 10px;
+       }
+   </style>
+</head>
+<body>
+<h1>Tealis Frontend</h1>
+<p>Enter Redis-like commands below:</p>
+<input id="commandInput" type="text" placeholder="Type a command (e.g., SET key value)" />
+<button id="sendButton">Send</button>
+<div id="response"></div>
+
+<script>
+   // Connect to WebSocket server
+   const socket = new WebSocket("ws://localhost:8080/ws");
+   const responseDiv = document.getElementById("response");
+   const input = document.getElementById("commandInput");
+   const sendButton = document.getElementById("sendButton");
+
+   // Handle connection open
+   socket.onopen = () => {
+      responseDiv.innerHTML += "Connected to server<br>";
+   };
+
+   // Handle incoming messages
+   socket.onmessage = (event) => {
+      responseDiv.innerHTML += `<div>${event.data}</div>`;
+      responseDiv.scrollTop = responseDiv.scrollHeight; // Auto-scroll to bottom
+   };
+
+   // Handle connection close
+   socket.onclose = () => {
+      responseDiv.innerHTML += "Disconnected from server<br>";
+   };
+
+   // Handle send button click
+   sendButton.addEventListener("click", () => {
+      const command = input.value.trim();
+      if (command) {
+         socket.send(command); // Send command to server
+         input.value = ""; // Clear input field
+      }
+   });
+</script>
+</body>
+</html>

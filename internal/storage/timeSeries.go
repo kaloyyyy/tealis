@@ -30,8 +30,8 @@ func NewTimeSeries() *TimeSeries {
 
 // TSCreate TS.CREATE creates a new time series.
 func (r *RedisClone) TSCreate(key string, aggregation string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Check if the key already exists
 	if _, exists := r.Store[key]; exists {
@@ -47,8 +47,8 @@ func (r *RedisClone) TSCreate(key string, aggregation string) error {
 
 // TSAdd TS.ADD adds a new data point to the time series.
 func (r *RedisClone) TSAdd(key string, timestamp time.Time, value float64) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Find the time series for the given key
 	ts, exists := r.Store[key].(*TimeSeries)
@@ -69,8 +69,8 @@ func (r *RedisClone) TSAdd(key string, timestamp time.Time, value float64) error
 
 // TSRange TS.RANGE returns the time series data points within the specified time range.
 func (r *RedisClone) TSRange(key string, start, end time.Time) ([]DataPoint, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	// Find the time series for the given key
 	ts, exists := r.Store[key].(*TimeSeries)
@@ -93,8 +93,8 @@ func (r *RedisClone) TSRange(key string, start, end time.Time) ([]DataPoint, err
 
 // TSGet TS.GET retrieves the latest data point in the time series.
 func (r *RedisClone) TSGet(key string) (DataPoint, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	// Find the time series for the given key
 	ts, exists := r.Store[key].(*TimeSeries)
@@ -115,8 +115,8 @@ func (r *RedisClone) TSGet(key string) (DataPoint, error) {
 
 // DownSample performs aggregation on the time series data.
 func (r *RedisClone) DownSample(key string, start, end time.Time, interval time.Duration, method string) ([]DataPoint, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	// Find the time series for the given key
 	ts, exists := r.Store[key].(*TimeSeries)

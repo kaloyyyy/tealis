@@ -94,8 +94,8 @@ func (hll *HyperLogLog) Merge(other *HyperLogLog) {
 }
 
 func (r *RedisClone) PFAdd(key string, value string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	if val, exists := r.Store[key]; exists {
 		if hll, ok := val.(*HyperLogLog); ok {
@@ -113,8 +113,8 @@ func (r *RedisClone) PFAdd(key string, value string) error {
 }
 
 func (r *RedisClone) PFCount(key string) (int64, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	if val, exists := r.Store[key]; exists {
 		if hll, ok := val.(*HyperLogLog); ok {
@@ -126,8 +126,8 @@ func (r *RedisClone) PFCount(key string) (int64, error) {
 }
 
 func (r *RedisClone) PFMerge(dest string, sources ...string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	var merged *HyperLogLog
 	for _, source := range sources {

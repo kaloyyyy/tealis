@@ -1,8 +1,8 @@
 package storage
 
 func (r *RedisClone) HSET(key, field string, value interface{}) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Retrieve or create the hash
 	hash, ok := r.Store[key].(map[string]interface{})
@@ -24,8 +24,8 @@ func (r *RedisClone) HSET(key, field string, value interface{}) int {
 	return 1
 }
 func (r *RedisClone) HGET(key, field string) (interface{}, bool) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	// Retrieve the hash
 	hash, ok := r.Store[key].(map[string]interface{})
@@ -39,8 +39,8 @@ func (r *RedisClone) HGET(key, field string) (interface{}, bool) {
 }
 
 func (r *RedisClone) HMSET(key string, fields map[string]interface{}) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Retrieve or create the hash
 	hash, ok := r.Store[key].(map[string]interface{})
@@ -55,8 +55,8 @@ func (r *RedisClone) HMSET(key string, fields map[string]interface{}) {
 	}
 }
 func (r *RedisClone) HGETALL(key string) map[string]interface{} {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	// Retrieve the hash
 	hash, ok := r.Store[key].(map[string]interface{})
@@ -73,8 +73,8 @@ func (r *RedisClone) HGETALL(key string) map[string]interface{} {
 }
 
 func (r *RedisClone) HDEL(key string, field string) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Retrieve the hash
 	hash, ok := r.Store[key].(map[string]interface{})
@@ -91,8 +91,8 @@ func (r *RedisClone) HDEL(key string, field string) int {
 }
 
 func (r *RedisClone) HEXISTS(key, field string) bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	// Retrieve the hash
 	hash, ok := r.Store[key].(map[string]interface{})

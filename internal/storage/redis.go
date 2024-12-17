@@ -12,7 +12,7 @@ import (
 )
 
 type RedisClone struct {
-	mu                sync.RWMutex
+	Mu                sync.RWMutex
 	Store             map[string]interface{} // Store can hold any data type (string, list, etc.)
 	expiries          map[string]time.Time
 	transactions      map[string][]string               // Store queued commands for each transaction
@@ -38,16 +38,16 @@ type MockClientConnection struct {
 
 // MULTI starts a transaction.
 func (r *RedisClone) MULTI(clientID string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 	r.transactions[clientID] = []string{} // Start a new transaction for the client
 }
 
 // EXEC executes all the queued commands in a transaction.
 // EXEC executes all the queued commands in a transaction and returns their results.
 func (r *RedisClone) EXEC(clientID string) string {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Check if there are queued commands for this client
 	if commands, ok := r.transactions[clientID]; ok {
@@ -79,8 +79,8 @@ func (r *RedisClone) EXEC(clientID string) string {
 
 // DISCARD discards all the queued commands in the transaction.
 func (r *RedisClone) DISCARD(clientID string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 	delete(r.transactions, clientID)
 }
 
@@ -93,14 +93,14 @@ func (r *RedisClone) StartCleanup(ctx context.Context) {
 				return
 			case <-time.After(time.Second):
 				now := time.Now()
-				r.mu.Lock()
+				r.Mu.Lock()
 				for key, expiry := range r.expiries {
 					if now.After(expiry) {
 						delete(r.Store, key)
 						delete(r.expiries, key)
 					}
 				}
-				r.mu.Unlock()
+				r.Mu.Unlock()
 			}
 		}
 	}()
@@ -109,16 +109,16 @@ func (r *RedisClone) StartCleanup(ctx context.Context) {
 // EX sets the expiry time for a given key.
 // The duration argument is the time duration after which the key will expire.
 func (r *RedisClone) EX(key string, duration time.Duration) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	expiryTime := time.Now().Add(duration)
 	r.expiries[key] = expiryTime
 }
 
 func (r *RedisClone) ZAdd(key string, score float64, member string) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Check if the key exists and is a sorted set
 	if val, exists := r.Store[key]; exists {
@@ -137,8 +137,8 @@ func (r *RedisClone) ZAdd(key string, score float64, member string) int {
 }
 
 func (r *RedisClone) ZRange(key string, start, end int) []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	// Check if the key exists and is a sorted set
 	if val, exists := r.Store[key]; exists {
@@ -151,8 +151,8 @@ func (r *RedisClone) ZRange(key string, start, end int) []string {
 }
 
 func (r *RedisClone) ZRank(key string, member string) int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	if val, exists := r.Store[key]; exists {
 		if ss, ok := val.(*SortedSet); ok {
@@ -164,8 +164,8 @@ func (r *RedisClone) ZRank(key string, member string) int {
 }
 
 func (r *RedisClone) ZRem(key string, member string) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	if val, exists := r.Store[key]; exists {
 		if ss, ok := val.(*SortedSet); ok {
@@ -177,8 +177,8 @@ func (r *RedisClone) ZRem(key string, member string) bool {
 }
 
 func (r *RedisClone) ZRangeByScore(key string, min, max float64) []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	if val, exists := r.Store[key]; exists {
 		if ss, ok := val.(*SortedSet); ok {
@@ -247,7 +247,7 @@ func (g *GeoSet) SearchByRadius(lat, lon, radius float64) []string {
 }
 
 func (r *RedisClone) GetClientConnection(clientID string) net.Conn {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 	return r.ClientConnections[clientID]
 }

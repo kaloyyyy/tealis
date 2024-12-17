@@ -11,8 +11,8 @@ import (
 
 // JSONSet JSON.SET function (sets a value at a path in a JSON-like structure)
 func (r *RedisClone) JSONSet(key string, path string, value string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Handle the special case where the path is "."
 
@@ -226,8 +226,8 @@ func getAtPath(data interface{}, path string) (interface{}, error) {
 
 // JSONArrAppend appends values to an array at the specified path.
 func (r *RedisClone) JSONArrAppend(key string, path string, values []interface{}) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 	// Remove leading dot if present
 	if strings.HasPrefix(path, ".") {
 		path = path[1:]

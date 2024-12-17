@@ -6,8 +6,8 @@ import (
 
 // SETBIT sets the bit at the specified offset in the key's value.
 func (r *RedisClone) SETBIT(key string, offset, value int) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	if offset < 0 {
 		return 0 // Invalid offset
@@ -43,8 +43,8 @@ func (r *RedisClone) SETBIT(key string, offset, value int) int {
 
 // GETBIT retrieves the bit at the specified offset in the key's value.
 func (r *RedisClone) GETBIT(key string, offset int) int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	if offset < 0 {
 		return 0
@@ -62,8 +62,8 @@ func (r *RedisClone) GETBIT(key string, offset int) int {
 
 // BITCOUNT counts the number of bits set to 1 in the key's value.
 func (r *RedisClone) BITCOUNT(key string) int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	data, _ := r.Store[key].([]byte)
 	count := 0
@@ -75,8 +75,8 @@ func (r *RedisClone) BITCOUNT(key string) int {
 
 // BITOP performs bitwise operations between keys and stores the result in a destination key.
 func (r *RedisClone) BITOP(op string, destKey string, keys ...string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Check for no keys or invalid operation
 	if len(keys) == 0 {

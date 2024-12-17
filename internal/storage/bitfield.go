@@ -7,8 +7,8 @@ import (
 
 // SetBitfield sets values in the bitfield at a given offset.
 func (r *RedisClone) SetBitfield(key string, bitType string, offset int, value int) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Initialize the bitfield if it doesn't exist.
 	if _, exists := r.Store[key]; !exists {
@@ -52,8 +52,8 @@ func (r *RedisClone) SetBitfield(key string, bitType string, offset int, value i
 
 // GetBitfield gets the value stored at the given offset for a specified type.
 func (r *RedisClone) GetBitfield(key string, bitType string, offset int) (int, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	if _, exists := r.Store[key]; !exists {
 		return 0, errors.New("key not found")
@@ -73,8 +73,8 @@ func (r *RedisClone) GetBitfield(key string, bitType string, offset int) (int, e
 
 // IncrByBitfield increments the value of the bitfield at a given offset by a specified increment.
 func (r *RedisClone) IncrByBitfield(key string, bitType string, offset int, increment int) (int, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	if _, exists := r.Store[key]; !exists {
 		return 0, errors.New("key not found")

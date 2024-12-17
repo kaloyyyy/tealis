@@ -2,8 +2,8 @@ package storage
 
 // SADD adds one or more members to a set.
 func (r *RedisClone) SADD(key string, members ...string) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Initialize the set if not already created
 	if _, exists := r.Store[key]; !exists {
@@ -23,8 +23,8 @@ func (r *RedisClone) SADD(key string, members ...string) int {
 
 // SREM removes one or more members from a set.
 func (r *RedisClone) SREM(key string, members ...string) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	set, exists := r.Store[key].(map[string]struct{})
 	if !exists {
@@ -45,8 +45,8 @@ func (r *RedisClone) SREM(key string, members ...string) int {
 
 // SISMEMBER checks if a member exists in the set.
 func (r *RedisClone) SISMEMBER(key, member string) bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	set, exists := r.Store[key].(map[string]struct{})
 	if !exists {
@@ -59,8 +59,8 @@ func (r *RedisClone) SISMEMBER(key, member string) bool {
 
 // SMEMBERS returns all members of a set.
 func (r *RedisClone) SMEMBERS(key string) []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	set, exists := r.Store[key].(map[string]struct{})
 	if !exists {
@@ -78,8 +78,8 @@ func (r *RedisClone) SMEMBERS(key string) []string {
 
 // SUNION returns the union of multiple sets.
 func (r *RedisClone) SUNION(keys ...string) []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	union := make(map[string]struct{})
 	for _, key := range keys {
@@ -105,8 +105,8 @@ func (r *RedisClone) SUNION(keys ...string) []string {
 
 // SINTER returns the intersection of multiple sets.
 func (r *RedisClone) SINTER(keys ...string) []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	if len(keys) == 0 {
 		return nil
@@ -149,8 +149,8 @@ func (r *RedisClone) SINTER(keys ...string) []string {
 
 // SDIFF returns the difference between multiple sets.
 func (r *RedisClone) SDIFF(keys ...string) []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	if len(keys) == 0 {
 		return nil

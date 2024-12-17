@@ -10,8 +10,8 @@ import (
 
 // Set saves a key-value pair with an optional TTL.
 func (r *RedisClone) Set(key, value string, ttl time.Duration) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	r.Store[key] = value
 	if ttl > 0 {
@@ -23,14 +23,14 @@ func (r *RedisClone) Set(key, value string, ttl time.Duration) {
 
 // Get retrieves the value for a key.
 func (r *RedisClone) Get(key string) (string, bool) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	if expiry, exists := r.expiries[key]; exists && time.Now().After(expiry) {
-		r.mu.Lock()
+		r.Mu.Lock()
 		delete(r.Store, key)
 		delete(r.expiries, key)
-		r.mu.Unlock()
+		r.Mu.Unlock()
 		return "", false
 	}
 
@@ -43,8 +43,8 @@ func (r *RedisClone) Get(key string) (string, bool) {
 
 // Del deletes a key from the store.
 func (r *RedisClone) Del(key string) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	if _, exists := r.Store[key]; exists {
 		delete(r.Store, key)
@@ -56,16 +56,16 @@ func (r *RedisClone) Del(key string) bool {
 
 // Exists checks if a key exists in the store.
 func (r *RedisClone) Exists(key string) bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 	_, exists := r.Store[key]
 	return exists
 }
 
 // Append appends a value to an existing key.
 func (r *RedisClone) Append(key, value string) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	if current, exists := r.Store[key]; exists {
 		r.Store[key] = current.(string) + value
@@ -77,8 +77,8 @@ func (r *RedisClone) Append(key, value string) int {
 
 // StrLen returns the length of a string value for a key.
 func (r *RedisClone) StrLen(key string) int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	if value, exists := r.Store[key]; exists {
 		return len(value.(string))
@@ -88,8 +88,8 @@ func (r *RedisClone) StrLen(key string) int {
 
 // IncrBy increments a key by a specified value.
 func (r *RedisClone) IncrBy(key string, increment int) (int, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	current, exists := r.Store[key]
 	if !exists {
@@ -109,8 +109,8 @@ func (r *RedisClone) IncrBy(key string, increment int) (int, error) {
 
 // GetRange retrieves a substring from a value.
 func (r *RedisClone) GetRange(key string, start, end int) string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	value, exists := r.Store[key].(string)
 	if !exists {
@@ -144,8 +144,8 @@ func (r *RedisClone) GetRange(key string, start, end int) string {
 
 // SetRange sets a substring at the specified offset.
 func (r *RedisClone) SetRange(key string, offset int, value string) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	currentValue, exists := r.Store[key].(string)
 	if !exists {
@@ -163,8 +163,8 @@ func (r *RedisClone) SetRange(key string, offset int, value string) int {
 
 // Keys returns keys that match a pattern.
 func (r *RedisClone) Keys(pattern string) []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	var matchedKeys []string
 	for key := range r.Store {

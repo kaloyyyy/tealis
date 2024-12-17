@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"github.com/gorilla/websocket"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -12,6 +14,45 @@ import (
 	"tealis/internal/storage"
 )
 
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true // Allow all origins (adjust for security if needed)
+	},
+}
+
+func websocketHandler(store *storage.RedisClone, w http.ResponseWriter, r *http.Request) {
+	// Upgrade the HTTP connection to a WebSocket connection
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Error upgrading to WebSocket: %v", err)
+		return
+	}
+	defer conn.Close()
+
+	// Handle incoming WebSocket messages
+	for {
+		// Read message from client
+		_, message, err := conn.ReadMessage()
+		if err != nil {
+			log.Printf("WebSocket read error: %v", err)
+			break
+		}
+
+		// Log the received command
+		command := string(message)
+		log.Printf("Received WebSocket command: %s", command)
+
+		// Process the command and get the response
+		parts := protocol.ParseCommand(command)
+		response := storage.ProcessCommand(parts, store, "0")
+
+		// Send the response back to the client
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(response)); err != nil {
+			log.Printf("WebSocket write error: %v", err)
+			break
+		}
+	}
+}
 func main() {
 	// Create the Redis clone instance
 	store := storage.NewRedisClone()
@@ -21,7 +62,14 @@ func main() {
 
 	// Start background cleanup task for expired keys
 	store.StartCleanup(ctx)
-
+	go func() {
+		// Start WebSocket server on a separate port (e.g., 8080)
+		http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+			websocketHandler(store, w, r)
+		})
+		log.Println("WebSocket server is running on port 8080...")
+		log.Fatal(http.ListenAndServe(":8080", nil))
+	}()
 	// Set up a listener on port 6379
 	listener, err := net.Listen("tcp", ":6379")
 	if err != nil {
@@ -69,14 +117,14 @@ func handleConnectionWithRead(conn net.Conn, store *storage.RedisClone, clientAd
 	var input []byte          // the full command input from the client
 
 	clientID := clientAddr // For simplicity, use the client's address as the ID
-	store.mu.Lock()
+	store.Mu.Lock()
 	store.ClientConnections[clientID] = conn
-	store.mu.Unlock()
+	store.Mu.Unlock()
 	defer func() {
 		log.Printf("Client %s disconnected.", clientAddr)
-		store.mu.Lock()
+		store.Mu.Lock()
 		delete(store.ClientConnections, clientID)
-		store.mu.Unlock()
+		store.Mu.Unlock()
 		conn.Close()
 	}()
 

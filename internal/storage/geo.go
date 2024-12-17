@@ -1,8 +1,8 @@
 package storage
 
 func (r *RedisClone) GEOAdd(key string, lat, lon float64, member string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// Check if the key exists and is a GeoSet
 	if val, exists := r.Store[key]; exists {
@@ -20,8 +20,8 @@ func (r *RedisClone) GEOAdd(key string, lat, lon float64, member string) {
 }
 
 func (r *RedisClone) GEODist(key, member1, member2 string) float64 {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	if val, exists := r.Store[key]; exists {
 		if geo, ok := val.(*GeoSet); ok {
@@ -38,8 +38,8 @@ func (r *RedisClone) GEODist(key, member1, member2 string) float64 {
 }
 
 func (r *RedisClone) GEOSearch(key string, lat, lon, radius float64) []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	if val, exists := r.Store[key]; exists {
 		if geo, ok := val.(*GeoSet); ok {
