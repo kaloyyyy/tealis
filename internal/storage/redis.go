@@ -239,7 +239,7 @@ func (r *RedisClone) loadAOF() {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
-	file, err := os.Open(r.aofFilePath)
+	file, err := os.Open(r.snapshotPath + "/" + r.aofFilePath)
 	if err != nil {
 		log.Printf("Error loading AOF file: %v", err)
 		return
