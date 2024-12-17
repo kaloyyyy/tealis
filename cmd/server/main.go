@@ -29,6 +29,9 @@ func websocketHandler(store *storage.RedisClone, w http.ResponseWriter, r *http.
 	}
 	defer conn.Close()
 
+	// Get the client ID (address of the WebSocket connection)
+	clientID := conn.RemoteAddr().String()
+	log.Printf("New WebSocket client connected: %s", clientID)
 	// Handle incoming WebSocket messages
 	for {
 		// Read message from client
@@ -40,11 +43,11 @@ func websocketHandler(store *storage.RedisClone, w http.ResponseWriter, r *http.
 
 		// Log the received command
 		command := string(message)
-		log.Printf("Received WebSocket command: %s", command)
+		log.Printf("Received WebSocket command from %s: %s", clientID, command)
 
 		// Process the command and get the response
 		parts := protocol.ParseCommand(command)
-		response := storage.ProcessCommand(parts, store, "0")
+		response := storage.ProcessCommand(parts, store, clientID)
 
 		// Send the response back to the client
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(response)); err != nil {
@@ -53,6 +56,7 @@ func websocketHandler(store *storage.RedisClone, w http.ResponseWriter, r *http.
 		}
 	}
 }
+
 func main() {
 	// Create the Redis clone instance
 	store := storage.NewRedisClone()
