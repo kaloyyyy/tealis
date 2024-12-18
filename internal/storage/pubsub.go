@@ -63,6 +63,7 @@ func (r *RedisClone) Publish(channel, message string) string {
 }
 
 // deliverMessages sends messages from a channel to a client.
+// deliverMessages sends messages from a channel to a client.
 func (r *RedisClone) deliverMessages(clientID string, msgChan chan string) {
 	log.Printf("delivering messages to %s in chan: %v", clientID, msgChan)
 	for msg := range msgChan {
@@ -72,17 +73,37 @@ func (r *RedisClone) deliverMessages(clientID string, msgChan chan string) {
 			err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
 			if err != nil {
 				log.Printf("Error delivering message to WebSocket client %s: %v", clientID, err)
+				// Handle cleanup if needed (e.g., unsubscribe client)
+				r.Unsubscribe(clientID, "channel") // Clean up the client subscription
+				break
 			}
 		} else if conn, ok := r.ClientConnections[clientID].(net.Conn); ok {
 			// Send message to regular TCP client
 			_, err := conn.Write([]byte(msg + "\r\n"))
 			if err != nil {
 				log.Printf("Error delivering message to TCP client %s: %v", clientID, err)
+				// Handle cleanup if needed (e.g., unsubscribe client)
+				r.Unsubscribe(clientID, "channel") // Clean up the client subscription
+				break
+			}
+		} else if mockConn, ok := r.mockClients[clientID]; ok {
+			// Send message to mock client (i.e., add to Outbox channel)
+			select {
+			case mockConn.Outbox <- msg:
+				// Successfully sent the message to the mock client
+			default:
+				// If the Outbox is full, handle the case
+				log.Printf("Warning: Mock client's Outbox is full, dropping message")
 			}
 		} else {
 			log.Printf("Client %s is neither WebSocket nor TCP, skipping message delivery", clientID)
 		}
 	}
+}
+
+// MockClientConnection simulates a client connection with an Outbox for receiving messages
+type MockClientConnection struct {
+	Outbox chan string
 }
 
 func NewMockClientConnection() *MockClientConnection {

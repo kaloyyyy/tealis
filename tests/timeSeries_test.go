@@ -13,7 +13,7 @@ func TestTimeSeries(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, "", true)
+	r := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	// Test TS.CREATE
 	err := r.TSCreate("temperature", "avg")
@@ -90,7 +90,7 @@ func TestTimeSeriesDownsamplingMinMax(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, "", true)
+	r := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 	// Create time series with different aggregation methods
 	err := r.TSCreate("temperature_avg", "avg")
 	if err != nil {

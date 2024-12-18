@@ -17,7 +17,7 @@ func TestSetGet(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	// Test setting a key-value pair
 	store.Set("key1", "value1", 0)
@@ -36,7 +36,7 @@ func TestSetWithTTL(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	// Create a cancellable context for cleanup
 	ctx, cancel := context.WithCancel(context.Background())
@@ -62,7 +62,7 @@ func TestDel(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	// Set and delete a key
 	store.Set("key3", "value3", 0)
@@ -79,7 +79,7 @@ func TestExists(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	// Set a key and check if it exists
 	store.Set("key4", "value4", 0)
@@ -96,7 +96,7 @@ func TestAppend(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	// Test appending to a key
 	store.Set("key5", "hello", 0)
@@ -117,7 +117,7 @@ func TestStrLen(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	// Test string length
 	store.Set("key7", "some value", 0)
@@ -134,7 +134,7 @@ func TestIncrBy(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	// Test INCRBY with an existing integer key
 	store.Set("key8", "5", 0)
@@ -158,7 +158,7 @@ func TestDecrBy(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 	// Test DECRBY with an existing integer key
 	store.Set("key11", "5", 0)
 	newValue, err := store.IncrBy("key11", -2)
@@ -176,7 +176,7 @@ func TestGetRange(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 	// Set a string value
 	store.Set("key13", "Hello World", 0)
 
@@ -198,7 +198,7 @@ func TestSetRange(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 	// Test 1: Basic SETRANGE functionality
 	store.Set("key1", "Hello", 0)
 	// Set the range at index 6 with the value "Go"

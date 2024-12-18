@@ -13,7 +13,7 @@ func TestSetBitfield(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, "", true)
+	r := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	// Test setting an i8 value
 	err := r.SetBitfield("key1", "i8", 0, -128)
@@ -45,7 +45,7 @@ func TestGetBitfield(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, "", true)
+	r := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 	// Set up initial bitfield values
 	err := r.SetBitfield("key1", "i8", 0, -128)
 	if err != nil {
@@ -70,17 +70,22 @@ func TestGetBitfield(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	if value != -1 {
+	if value != 65535 {
 		t.Errorf("expected value 65535, got %d", value)
 	}
 }
 
 func TestIncrByBitfield(t *testing.T) {
-	aofFilePath := "test.aof"
+	// Setup
+	aofFilePath := "./snapshot/aof.txt"
+	snapshotPath := "./snapshot/snapshot.txt"
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, "", true)
+	r := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	store := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	print(store)
+	print(r)
 	// Set up initial bitfield values
 	err := r.SetBitfield("key1", "i8", 0, -128)
 	if err != nil {

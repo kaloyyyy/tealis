@@ -83,7 +83,7 @@ func serveFrontend() {
 
 func main() {
 	// Create the Redis clone instance
-	store := storage.NewRedisClone()
+	store := storage.NewRedisClone("test.aof", "./snapshot", true)
 	// Create a context for cancellation
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

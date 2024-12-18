@@ -2,6 +2,7 @@ package storage
 
 import (
 	"os"
+	"sort"
 	"tealis/internal/storage"
 	"testing"
 )
@@ -11,7 +12,7 @@ func TestRedisCloneSetOperations(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, "", true)
+	r := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 	// Test SADD
 	t.Run("SADD", func(t *testing.T) {
 		length := r.SADD("myset", "a", "b", "c", "d")
@@ -22,6 +23,8 @@ func TestRedisCloneSetOperations(t *testing.T) {
 		// Verify the set content
 		members := r.SMEMBERS("myset")
 		expectedMembers := []string{"a", "b", "c", "d"}
+		sort.Strings(expectedMembers)
+		sort.Strings(members)
 		if !equal(members, expectedMembers) {
 			t.Errorf("Expected set %v, but got %v", expectedMembers, members)
 		}
@@ -37,6 +40,8 @@ func TestRedisCloneSetOperations(t *testing.T) {
 		// Verify the set content after removal
 		members := r.SMEMBERS("myset")
 		expectedMembers := []string{"c", "d"}
+		sort.Strings(members)
+		sort.Strings(expectedMembers)
 		if !equal(members, expectedMembers) {
 			t.Errorf("Expected set %v, but got %v", expectedMembers, members)
 		}
@@ -63,6 +68,8 @@ func TestRedisCloneSetOperations(t *testing.T) {
 
 		union := r.SUNION("myset", "myset2", "myset3")
 		expectedUnion := []string{"d", "e", "f", "g", "h", "i", "c"}
+		sort.Strings(union)
+		sort.Strings(expectedUnion)
 		if !equal(union, expectedUnion) {
 			t.Errorf("Expected union %v, but got %v", expectedUnion, union)
 		}
@@ -75,6 +82,8 @@ func TestRedisCloneSetOperations(t *testing.T) {
 
 		intersection := r.SINTER("myset", "myset2")
 		expectedIntersection := []string{"c", "d"}
+		sort.Strings(expectedIntersection)
+		sort.Strings(intersection)
 		if !equal(intersection, expectedIntersection) {
 			t.Errorf("Expected intersection %v, but got %v", expectedIntersection, intersection)
 		}

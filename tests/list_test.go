@@ -12,7 +12,7 @@ func TestRedisCloneListOperations(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, "", true)
+	r := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 	// Test RPUSH
 	t.Run("RPUSH", func(t *testing.T) {
 		// Add items to the list

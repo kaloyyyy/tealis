@@ -7,11 +7,16 @@ import (
 )
 
 func TestBitFunctions(t *testing.T) {
-	aofFilePath := "test.aof"
+	// Setup
+	aofFilePath := "./snapshot/aof.txt"
+	snapshotPath := "./snapshot/snapshot.txt"
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, "", true)
+	r := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	store := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	print(store)
+	print(r)
 	key1 := "key1"
 	key3 := "key3"
 	destKey := "dest"

@@ -93,7 +93,16 @@ func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 		// Set expiry using the EX method (duration is in seconds, so we multiply by time.Second)
 		store.EX(parts[0], time.Duration(duration*float64(time.Second)))
 		return "OK" // Success message
-
+	case "SAVE":
+		if err := store.SaveSnapshot(); err != nil {
+			return fmt.Sprintf("-ERR Failed to save snapshot: %v\r\n", err)
+		}
+		return "+OK Snapshot saved\r\n"
+	case "RESTORE":
+		if err := store.LoadSnapshot(); err != nil {
+			return fmt.Sprintf("-ERR Failed to load snapshot: %v\r\n", err)
+		}
+		return "+OK Snapshot restored\r\n"
 	case "APPEND":
 		if len(parts) < 3 {
 			return "-ERR APPEND requires key and value"
@@ -855,6 +864,44 @@ func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 		channel := parts[1]
 		message := strings.Join(parts[2:], " ")
 		return store.Publish(channel, message)
+
+	case "VECTOR.SET":
+		if len(parts) < 3 {
+			return "-ERR Usage: VECTOR.SET key [values...]\r\n"
+		}
+		key := parts[1]
+		vector := make([]float64, len(parts[2:]))
+		for i, v := range parts[2:] {
+			val, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				return "-ERR Invalid vector value\r\n"
+			}
+			vector[i] = val
+		}
+		return store.VectorSet(key, vector)
+	case "VECTOR.GET":
+		if len(parts) != 2 {
+			return "-ERR Usage: VECTOR.GET key\r\n"
+		}
+		key := parts[1]
+		return store.VectorGet(key)
+	case "VECTOR.SEARCH":
+		if len(parts) < 4 {
+			return "-ERR Usage: VECTOR.SEARCH [query...] k\r\n"
+		}
+		query := make([]float64, len(parts[1:len(parts)-1]))
+		for i, v := range parts[1 : len(parts)-1] {
+			val, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				return "-ERR Invalid query vector value\r\n"
+			}
+			query[i] = val
+		}
+		k, err := strconv.Atoi(parts[len(parts)-1])
+		if err != nil || k <= 0 {
+			return "-ERR Invalid k value\r\n"
+		}
+		return store.VectorSearch(query, k)
 
 	default:
 		return "-ERR Unknown command"

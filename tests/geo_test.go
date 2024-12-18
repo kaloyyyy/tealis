@@ -2,17 +2,22 @@ package storage_test
 
 import (
 	"os"
+	"sort"
 	"tealis/internal/storage"
 	"testing"
 )
 
 func TestGeoCommands(t *testing.T) {
 	// Setup
-	aofFilePath := "test.aof"
+	aofFilePath := "./snapshot/aof.txt"
+	snapshotPath := "./snapshot/snapshot.txt"
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	r := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	store := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	print(store)
+	print(r)
 
 	// Test GEOAdd
 	t.Run("GEOAdd", func(t *testing.T) {
@@ -51,6 +56,8 @@ func TestGeoCommands(t *testing.T) {
 
 		results := store.GEOSearch("geoKey", 13.361389, 38.115556, 300)
 		expectedResults := []string{"Palermo", "Catania"}
+		sort.Strings(results)
+		sort.Strings(expectedResults)
 		if !compareStringSlices(results, expectedResults) {
 			t.Errorf("Expected results %v, got %v", expectedResults, results)
 		}

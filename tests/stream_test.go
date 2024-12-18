@@ -11,7 +11,7 @@ func TestRedisCloneStreams(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 	var id string
 	t.Run("XADD - Add entry to stream", func(t *testing.T) {
 		id = store.XAdd("mystream", "*", map[string]string{"field1": "value1", "field2": "value2"})

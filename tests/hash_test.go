@@ -12,7 +12,7 @@ func TestHSET(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	// Test adding a new field
 	result := store.HSET("myhash", "field1", "value1")
@@ -34,11 +34,16 @@ func TestHSET(t *testing.T) {
 }
 
 func TestHGET(t *testing.T) {
-	aofFilePath := "test.aof"
+	// Setup
+	aofFilePath := "./snapshot/aof.txt"
+	snapshotPath := "./snapshot/snapshot.txt"
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	r := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	store := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	print(store)
+	print(r)
 
 	store.HSET("myhash", "field1", "value1")
 
@@ -56,11 +61,16 @@ func TestHGET(t *testing.T) {
 }
 
 func TestHMSET(t *testing.T) {
-	aofFilePath := "test.aof"
+	// Setup
+	aofFilePath := "./snapshot/aof.txt"
+	snapshotPath := "./snapshot/snapshot.txt"
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	r := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	store := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	print(store)
+	print(r)
 	// Set multiple fields
 	store.HMSET("myhash", map[string]interface{}{
 		"field1": "value1",
@@ -84,7 +94,7 @@ func TestHGETALL(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	store.HMSET("myhash", map[string]interface{}{
 		"field1": "value1",
@@ -114,7 +124,7 @@ func TestHDEL(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	store.HSET("myhash", "field1", "value1")
 	store.HSET("myhash", "field2", "value2")
@@ -143,7 +153,7 @@ func TestHEXISTS(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
 
 	store.HSET("myhash", "field1", "value1")
 

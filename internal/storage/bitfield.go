@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"math"
 )
 
@@ -91,12 +92,54 @@ func (r *RedisClone) IncrByBitfield(key string, bitType string, offset int, incr
 	// Increment the value
 	newValue := currentValue + increment
 
+	// Check for overflow based on bit type
+	maxValue := getMaxValueForBitType(bitType)
+	minValue := getMinValueForBitType(bitType)
+
+	if newValue > maxValue || newValue < minValue {
+		return 0, fmt.Errorf("overflow: value %d exceeds the range for %s bitfield", newValue, bitType)
+	}
+
 	// Update the bitfield
 	if err := r.setBitfieldValue(bitfield, offset, newValue, getBitfieldSize(bitType), key); err != nil {
 		return 0, err
 	}
 
 	return newValue, nil
+}
+
+// getMaxValueForBitType returns the maximum value for a given bitfield type.
+func getMaxValueForBitType(bitType string) int {
+	switch bitType {
+	case "i8":
+		return 127 // Maximum value for signed 8-bit (two's complement)
+	case "u8":
+		return 255 // Maximum value for unsigned 8-bit
+	case "i16":
+		return 32767 // Maximum value for signed 16-bit
+	case "u16":
+		return 65535 // Maximum value for unsigned 16-bit
+	// Add more types as needed
+	default:
+		return 0 // Default case for unsupported bit types
+	}
+}
+
+// getMinValueForBitType returns the minimum value for a given bitfield type.
+func getMinValueForBitType(bitType string) int {
+	switch bitType {
+	case "i8":
+		return -128 // Minimum value for signed 8-bit (two's complement)
+	case "u8":
+		return 0 // Minimum value for unsigned 8-bit
+	case "i16":
+		return -32768 // Minimum value for signed 16-bit
+	case "u16":
+		return 0 // Minimum value for unsigned 16-bit
+	// Add more types as needed
+	default:
+		return 0 // Default case for unsupported bit types
+	}
 }
 
 // Helper function to determine the bitfield size based on the type
@@ -163,11 +206,19 @@ func getBitfieldValue(bitfield []byte, offset int, size int) (int, error) {
 		value |= int(bit) << (size - 1 - i)
 	}
 
-	// If the value is negative (signed bitfield), perform sign extension
-	if size > 0 && value&(1<<(size-1)) != 0 { // If the highest bit is set (negative value in signed bitfields)
-		// Perform two's complement sign extension
+	// Handle signed bitfield values (e.g., i8)
+	if size == 8 && value&(1<<(size-1)) != 0 {
+		// Two's complement sign extension for signed 8-bit integers
 		value -= 1 << size
 	}
 
+	// Handle unsigned 16-bit values (e.g., u16)
+	if size == 16 && value < 0 {
+		// For unsigned 16-bit, we don't expect negative numbers
+		// (i.e., the bitfield should always represent a positive number)
+		return value & 0xFFFF, nil // Mask out the negative sign bits
+	}
+
+	// Return the value as is if it's unsigned
 	return value, nil
 }
