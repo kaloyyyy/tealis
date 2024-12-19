@@ -16,11 +16,11 @@ type RedisClone struct {
 	Mu                sync.RWMutex
 	Store             map[string]interface{} // Store can hold any data type (string, list, etc.)
 	Expiries          map[string]time.Time
-	transactions      map[string][]string               // Store queued commands for each transaction
+	Transactions      map[string][]string               // Store queued commands for each transaction
 	pubsubSubscribers map[string]map[string]chan string // channel -> clientID -> message channel
 	ClientConnections map[string]interface{}            // clientID -> connection (can be net.Conn or *websocket.Conn)
 	mockClients       map[string]*MockClientConnection
-
+	multi             bool
 	// Persistence options
 	AofFile       *os.File // Append-Only File
 	aofFilePath   string   // Path to the AOF file
@@ -33,10 +33,11 @@ func NewRedisClone(aofFilePath, snapshotPath string, enableAOF bool) *RedisClone
 	r := &RedisClone{
 		Store:             make(map[string]interface{}),
 		Expiries:          make(map[string]time.Time),
-		transactions:      make(map[string][]string),
+		Transactions:      make(map[string][]string),
 		pubsubSubscribers: make(map[string]map[string]chan string),
 		ClientConnections: make(map[string]interface{}),
 		mockClients:       make(map[string]*MockClientConnection),
+		multi:             false,
 		aofFilePath:       aofFilePath,
 		enableAOF:         enableAOF,
 		snapshotPath:      snapshotPath,
@@ -66,48 +67,51 @@ func NewRedisClone(aofFilePath, snapshotPath string, enableAOF bool) *RedisClone
 func (r *RedisClone) MULTI(clientID string) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
-	r.transactions[clientID] = []string{} // Start a new transaction for the client
+	r.Transactions[clientID] = []string{} // Start a new transaction for the client
+	r.multi = true
 }
 
-// EXEC executes all the queued commands in a transaction.
-// EXEC executes all the queued commands in a transaction and returns their results.
 func (r *RedisClone) EXEC(clientID string) string {
 	r.Mu.Lock()
-	defer r.Mu.Unlock()
 
 	// Check if there are queued commands for this client
-	if commands, ok := r.transactions[clientID]; ok {
-		var response []string // This will hold the responses for each command
-
-		// Iterate through each queued command and process it
-		for _, cmd := range commands {
-			// Split the command into parts (assuming it's space-separated, e.g., SET key value)
-			parts := strings.Fields(cmd)
-
-			// Process the command and capture the response
-			responseStr := ProcessCommand(parts, r, clientID)
-			response = append(response, responseStr)
-
-			// Log the command execution
-			log.Printf("Executing command in transaction: %s, Response: %s", cmd, responseStr)
-		}
-
-		// After executing, clear the transaction for the client
-		delete(r.transactions, clientID)
-
-		// Return all responses in the transaction, joined by a newline
-		return strings.Join(response, "\r\n") + "\r\n"
+	commands, ok := r.Transactions[clientID]
+	if !ok {
+		r.Mu.Unlock()
+		return "-ERR No transaction started\r\n"
 	}
 
-	// If no transaction was started, return an error
-	return "-ERR No transaction started\r\n"
+	// Copy commands to process outside the lock
+	commandsToExecute := make([]string, len(commands))
+	copy(commandsToExecute, commands)
+
+	// Clear the transaction for the client
+	delete(r.Transactions, clientID)
+
+	r.Mu.Unlock() // Release the lock
+
+	var response []string // This will hold the responses for each command
+	// Return all responses in the transaction, joined by a newline
+	r.multi = false
+	// Process each command
+	for _, cmd := range commandsToExecute {
+		parts := strings.Fields(cmd) // Split the command into parts
+		responseStr := ProcessCommand(parts, r, clientID)
+		response = append(response, responseStr)
+
+		// Log the command execution
+		log.Printf("Executing command in transaction: %s, Response: %s", cmd, responseStr)
+	}
+
+	return strings.Join(response, "\r\n") + "\r\n"
 }
 
 // DISCARD discards all the queued commands in the transaction.
 func (r *RedisClone) DISCARD(clientID string) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
-	delete(r.transactions, clientID)
+	r.multi = false
+	delete(r.Transactions, clientID)
 }
 
 // StartCleanup periodically cleans expired keys.
@@ -164,7 +168,7 @@ func (r *RedisClone) AppendToAOF(command string) {
 	}
 
 	// Log successful write
-	log.Printf("Command appended to AOF: %s", command)
+	log.Printf("fn: Command appended to AOF: %s", command)
 }
 
 // ensureAOFFileOpen ensures the AOF file is open.
@@ -317,4 +321,21 @@ func (r *RedisClone) StartSnapshotScheduler(ctx context.Context, interval time.D
 			}
 		}
 	}()
+}
+
+// APPENDTO appends a command to the transaction queue for the given client.
+func (r *RedisClone) APPENDTO(clientID string, command string) string {
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
+
+	// Check if the client has an active transaction
+	if _, ok := r.Transactions[clientID]; !ok {
+		return "- appendto ERR No transaction started\r\n"
+	}
+
+	// Append the command to the client's transaction queue
+	r.Transactions[clientID] = append(r.Transactions[clientID], command)
+
+	// Return a success message
+	return "+QUEUED\r\n"
 }

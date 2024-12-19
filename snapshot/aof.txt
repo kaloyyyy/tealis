@@ -1,16 +1,394 @@
-RESTORE
-GET
-EX
-SET
-restore
-ex key 100
-save
-quit
-RESTORE
-GET
-EX
-SET
-restore
-ex key 100
-save
-quit
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+multi
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+multi
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+multi
+discard
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+exec
+set key value
+del key
+multi
+exec
+set key value
+del key
+multi
+exec
+get key
+multi
+discard
+multi
+exec
+multi
+exec
+set key value
+get key value

@@ -17,13 +17,23 @@ func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 		return "-ERR Empty command"
 	}
 	// Join the array into a single string with spaces separating the elements
-	result := strings.Join(parts, " ")
+	commandString := strings.Join(parts, " ")
 	command := strings.ToUpper(parts[0])
-	store.AppendToAOF(result)
+	if store.multi && !(command == "EXEC" || command == "DISCARD") {
+		return store.APPENDTO(clientID, commandString)
+	}
+	if command == "EXEC" {
+		print("EXECCCCCCC")
+	}
+	store.AppendToAOF(commandString)
 	switch command {
 	case "MULTI":
 		store.MULTI(clientID)
-		return "+OK\r\n"
+		if store.multi {
+			return "+OK MULTI\r\n"
+		}
+		return "-NOT MULTI"
+
 	case "EXEC":
 		return store.EXEC(clientID)
 	case "DISCARD":

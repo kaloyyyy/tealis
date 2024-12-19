@@ -53,7 +53,7 @@ func countLinesInDir(dirPath string) (int, error) {
 	return totalLines, nil
 }
 
-func main() {
+func countLines() {
 	dirPath := "." // Start in the current directory, change if needed
 
 	lines, err := countLinesInDir(dirPath)
