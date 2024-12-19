@@ -186,29 +186,35 @@ func (r *RedisClone) AofFileClosed() bool {
 	return err != nil
 }
 
-// LoadAOF replays commands from the AOF file to restore the database state.
 func (r *RedisClone) loadAOF() {
-	r.Mu.Lock()
-	defer r.Mu.Unlock()
-
+	r.Mu.RLock()
 	file, err := os.Open(r.aofFilePath)
 	if err != nil {
 		log.Printf("Error loading AOF file: %v", err)
+		r.Mu.RUnlock()
 		return
 	}
+	r.Mu.RUnlock() // Release lock after opening file
 	defer file.Close()
 
+	var commands [][]string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		command := scanner.Text()
 		parts := strings.Fields(command)
 		if len(parts) > 0 {
-			ProcessCommand(parts, r, "AOFLoader")
+			commands = append(commands, parts)
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Printf("Error reading AOF file: %v", err)
+		return
+	}
+
+	// Process commands without holding the lock
+	for _, parts := range commands {
+		ProcessCommand(parts, r, "AOFLoader")
 	}
 }
 

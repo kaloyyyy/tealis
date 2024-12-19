@@ -1,1 +1,3 @@
 SET key value
+SET key value
+SET key value
