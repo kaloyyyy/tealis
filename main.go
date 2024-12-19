@@ -14,6 +14,53 @@ import (
 	"tealis/internal/storage"
 )
 
+func main() {
+	// Create the Redis clone instance
+	aofFilePath := "./snapshot"
+	snapshotPath := "./snapshot"
+	store := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	// Create a context for cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start background cleanup task for expired keys
+	store.StartCleanup(ctx)
+
+	// Start WebSocket server on a separate goroutine (e.g., 8080)
+	go func() {
+		http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+			websocketHandler(store, w, r)
+		})
+		log.Println("WebSocket server is running on port 8080...")
+		log.Fatal(http.ListenAndServe(":8080", nil))
+	}()
+
+	// Start HTTP server for the frontend on port 8081
+	go serveFrontend()
+
+	// Set up a listener on port 6379 for the Redis clone
+	listener, err := net.Listen("tcp", ":6379")
+	if err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
+	defer listener.Close()
+
+	// Log that the server is running
+	log.Println("Redis clone is running on port 6379...")
+	log.Println("use `telnet 127.0.0.1 6379` to connect")
+
+	// Graceful shutdown setup
+	stopChan := make(chan os.Signal, 1)
+	signal.Notify(stopChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start accepting connections for Redis clone
+	go acceptConnections(listener, store)
+
+	// Block until we receive a shutdown signal
+	<-stopChan
+	log.Println("Shutting down server...")
+}
+
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true // Allow all origins (adjust for security if needed)
@@ -79,51 +126,6 @@ func serveFrontend() {
 
 	log.Println("Frontend server is running on port 8000...")
 	log.Fatal(http.ListenAndServe(":8000", nil))
-}
-
-func main() {
-	// Create the Redis clone instance
-	store := storage.NewRedisClone("test.aof", "./snapshot", true)
-	// Create a context for cancellation
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Start background cleanup task for expired keys
-	store.StartCleanup(ctx)
-
-	// Start WebSocket server on a separate goroutine (e.g., 8080)
-	go func() {
-		http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-			websocketHandler(store, w, r)
-		})
-		log.Println("WebSocket server is running on port 8080...")
-		log.Fatal(http.ListenAndServe(":8080", nil))
-	}()
-
-	// Start HTTP server for the frontend on port 8081
-	go serveFrontend()
-
-	// Set up a listener on port 6379 for the Redis clone
-	listener, err := net.Listen("tcp", ":6379")
-	if err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
-	defer listener.Close()
-
-	// Log that the server is running
-	log.Println("Redis clone is running on port 6379...")
-	log.Println("use `telnet 127.0.0.1 6379` to connect")
-
-	// Graceful shutdown setup
-	stopChan := make(chan os.Signal, 1)
-	signal.Notify(stopChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// Start accepting connections for Redis clone
-	go acceptConnections(listener, store)
-
-	// Block until we receive a shutdown signal
-	<-stopChan
-	log.Println("Shutting down server...")
 }
 
 func acceptConnections(listener net.Listener, store *storage.RedisClone) {

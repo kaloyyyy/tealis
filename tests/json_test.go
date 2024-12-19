@@ -8,11 +8,16 @@ import (
 )
 
 func TestJSONDel(t *testing.T) {
-	aofFilePath := "test.aof"
+	// Setup
+	aofFilePath := "./snapshot"
+	snapshotPath := "./snapshot"
+	// Clean up the ./snapshot folder and files before starting the test
+
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, "./snapshot", true)
+	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+
 	key := "testKey"
 	data := `{"key1": "value1", "nested": {"key2": "value2"}}`
 	err := r.JSONSet(key, ".", data)

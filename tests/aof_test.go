@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 	"tealis/internal/storage"
@@ -11,14 +12,15 @@ import (
 
 func TestAOF(t *testing.T) {
 	// Setup
-	aofFilePath := "./snapshot/aof.txt"
-	snapshotPath := "./snapshot/snapshot.txt"
-	defer os.Remove(aofFilePath) // Clean up the test AOF file
+	aofFilePath := "./snapshot"
+	snapshotPath := "./snapshot"
+	// Clean up the ./snapshot folder and files before starting the test
+	if err := os.RemoveAll("./snapshot"); err != nil {
+		t.Fatalf("Failed to clean up ./snapshot directory: %v", err)
+	}
 
 	// Initialize a RedisClone instance with AOF enabled
 	r := storage.NewRedisClone(aofFilePath, snapshotPath, true)
-	store := storage.NewRedisClone(aofFilePath, snapshotPath, true)
-	print(store)
 	print(r)
 	// Perform operations that modify the database
 	r.Set("key1", "value1", 0)
@@ -62,11 +64,11 @@ func TestAOF(t *testing.T) {
 	r.AppendToAOF(command)
 
 	// Open the AOF file and check if the command was written
-	file, err := os.Open(aofFilePath)
+	file, err := os.Open(aofFilePath + "/aof.txt")
 	if err != nil {
 		t.Fatalf("Failed to open AOF file: %v", err)
 	}
-	defer file.Close()
+	fmt.Printf("this file %v", file)
 
 	scanner := bufio.NewScanner(file)
 	var found bool
@@ -78,9 +80,9 @@ func TestAOF(t *testing.T) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		t.Fatalf("Error reading AOF file: %v", err)
+		t.Errorf("Error reading AOF file: %v", err)
 	}
-
+	defer file.Close()
 	if !found {
 		t.Errorf("Expected command '%s' not found in AOF file", command)
 	}

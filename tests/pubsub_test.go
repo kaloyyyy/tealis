@@ -8,32 +8,37 @@ import (
 )
 
 func TestPubSub(t *testing.T) {
-	aofFilePath := "test.aof"
+	// Setup
+	aofFilePath := "./snapshot"
+	snapshotPath := "./snapshot"
+	// Clean up the ./snapshot folder and files before starting the test
+
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "/snapshot", true)
+	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+
 	channel := "test-channel"
 
 	// Simulate a client connection for testing
 	clientID := "client1"
-	store.AddMockClientConnection(clientID) // Mock connection for the test
+	r.AddMockClientConnection(clientID) // Mock connection for the test
 
 	// Test Subscribe
-	subscribeResp := store.Subscribe(clientID, channel)
+	subscribeResp := r.Subscribe(clientID, channel)
 	if subscribeResp != "+SUBSCRIBED to test-channel" {
 		t.Errorf("Subscribe failed: expected '+SUBSCRIBED to test-channel', got '%s'", subscribeResp)
 	}
 
 	// Test Publish
 	message := "Hello, Pub/Sub!"
-	publishResp := store.Publish(channel, message)
+	publishResp := r.Publish(channel, message)
 	if publishResp != ":1" {
 		t.Errorf("Publish failed: expected ':1', got '%s'", publishResp)
 	}
 
 	// Test Message Delivery
-	conn := store.GetMockClientConnection(clientID)
+	conn := r.GetMockClientConnection(clientID)
 	if conn == nil {
 		t.Fatal("Failed to retrieve mock client connection")
 	}
@@ -48,13 +53,13 @@ func TestPubSub(t *testing.T) {
 	}
 
 	// Test Unsubscribe
-	unsubscribeResp := store.Unsubscribe(clientID, channel)
+	unsubscribeResp := r.Unsubscribe(clientID, channel)
 	if unsubscribeResp != "+UNSUBSCRIBED from test-channel" {
 		t.Errorf("Unsubscribe failed: expected '+UNSUBSCRIBED from test-channel', got '%s'", unsubscribeResp)
 	}
 
 	// Test Publish after Unsubscribe
-	publishResp = store.Publish(channel, message)
+	publishResp = r.Publish(channel, message)
 	if publishResp != ":0" {
 		t.Errorf("Publish after unsubscribe failed: expected ':0', got '%s'", publishResp)
 	}
@@ -65,7 +70,7 @@ func TestMultipleSubscribers(t *testing.T) {
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "./snapshot", true)
+	store := storage.NewRedisClone(aofFilePath, "./snapshot", false)
 	channel := "test-channel"
 
 	// Add multiple mock clients

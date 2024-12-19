@@ -1,0 +1,16 @@
+RESTORE
+GET
+EX
+SET
+restore
+ex key 100
+save
+quit
+RESTORE
+GET
+EX
+SET
+restore
+ex key 100
+save
+quit

@@ -9,22 +9,22 @@ import (
 
 func TestGeoCommands(t *testing.T) {
 	// Setup
-	aofFilePath := "./snapshot/aof.txt"
-	snapshotPath := "./snapshot/snapshot.txt"
+	aofFilePath := "./snapshot"
+	snapshotPath := "./snapshot"
+	// Clean up the ./snapshot folder and files before starting the test
+
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
 	// Initialize a RedisClone instance with AOF enabled
 	r := storage.NewRedisClone(aofFilePath, snapshotPath, true)
-	store := storage.NewRedisClone(aofFilePath, snapshotPath, true)
-	print(store)
 	print(r)
 
 	// Test GEOAdd
 	t.Run("GEOAdd", func(t *testing.T) {
-		store.GEOAdd("geoKey", 13.361389, 38.115556, "Palermo")
-		store.GEOAdd("geoKey", 15.087269, 37.502669, "Catania")
+		r.GEOAdd("geoKey", 13.361389, 38.115556, "Palermo")
+		r.GEOAdd("geoKey", 15.087269, 37.502669, "Catania")
 
-		geoSet := store.Store["geoKey"].(*storage.GeoSet)
+		geoSet := r.Store["geoKey"].(*storage.GeoSet)
 		if len(geoSet.Locations) != 2 {
 			t.Errorf("Expected 2 locations, got %d", len(geoSet.Locations))
 		}
@@ -38,10 +38,10 @@ func TestGeoCommands(t *testing.T) {
 
 	// Test GEODist
 	t.Run("GEODist", func(t *testing.T) {
-		store.GEOAdd("geoKey", 13.361389, 38.115556, "Palermo")
-		store.GEOAdd("geoKey", 15.087269, 37.502669, "Catania")
+		r.GEOAdd("geoKey", 13.361389, 38.115556, "Palermo")
+		r.GEOAdd("geoKey", 15.087269, 37.502669, "Catania")
 
-		dist := store.GEODist("geoKey", "Palermo", "Catania")
+		dist := r.GEODist("geoKey", "Palermo", "Catania")
 		expectedDist := 202.9598 // Example distance in km
 		if !closeEnough(dist, expectedDist, 0.0001) {
 			t.Errorf("Expected distance %.4f, got %.4f", expectedDist, dist)
@@ -50,11 +50,11 @@ func TestGeoCommands(t *testing.T) {
 
 	// Test GEOSearch
 	t.Run("GEOSearch", func(t *testing.T) {
-		store.GEOAdd("geoKey", 13.361389, 38.115556, "Palermo")
-		store.GEOAdd("geoKey", 15.087269, 37.502669, "Catania")
-		store.GEOAdd("geoKey", 40.0, 38.0, "AnotherCity")
+		r.GEOAdd("geoKey", 13.361389, 38.115556, "Palermo")
+		r.GEOAdd("geoKey", 15.087269, 37.502669, "Catania")
+		r.GEOAdd("geoKey", 40.0, 38.0, "AnotherCity")
 
-		results := store.GEOSearch("geoKey", 13.361389, 38.115556, 300)
+		results := r.GEOSearch("geoKey", 13.361389, 38.115556, 300)
 		expectedResults := []string{"Palermo", "Catania"}
 		sort.Strings(results)
 		sort.Strings(expectedResults)

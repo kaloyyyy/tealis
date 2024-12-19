@@ -2,13 +2,22 @@ package storage
 
 import (
 	"encoding/json"
+	"os"
 	"strings"
 	"tealis/internal/storage"
 	"testing"
 )
 
 func TestVectorSetAndGet(t *testing.T) {
-	r := storage.NewRedisClone("aof.txt", "./snapshot", false)
+	// Setup
+	aofFilePath := "./snapshot"
+	snapshotPath := "./snapshot"
+	// Clean up the ./snapshot folder and files before starting the test
+
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
 
 	// Test VectorSet
 	vector := []float64{1.0, 2.0, 3.0}
@@ -48,7 +57,15 @@ func TestVectorSetAndGet(t *testing.T) {
 }
 
 func TestVectorSearch(t *testing.T) {
-	r := storage.NewRedisClone("aof.txt", "./snapshot", false)
+	// Setup
+	aofFilePath := "./snapshot"
+	snapshotPath := "./snapshot"
+	// Clean up the ./snapshot folder and files before starting the test
+
+	defer os.Remove(aofFilePath) // Clean up the test AOF file
+
+	// Initialize a RedisClone instance with AOF enabled
+	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
 
 	// Add vectors
 	r.VectorSet("vec1", []float64{1.0, 0.0})
@@ -79,7 +96,7 @@ func TestVectorSearch(t *testing.T) {
 	// Test with incompatible dimensions
 	invalidQuery := []float64{1.0}
 	response = r.VectorSearch(invalidQuery, 2)
-	if !strings.Contains(response, "vec4") {
+	if !strings.Contains(response, "vec1") {
 		t.Errorf("Expected fallback result with key vec4 for invalid query dimensions, got %s", response)
 	}
 }

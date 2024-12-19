@@ -16,8 +16,10 @@ func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 	if len(parts) == 0 {
 		return "-ERR Empty command"
 	}
-
+	// Join the array into a single string with spaces separating the elements
+	result := strings.Join(parts, " ")
 	command := strings.ToUpper(parts[0])
+	store.AppendToAOF(result)
 	switch command {
 	case "MULTI":
 		store.MULTI(clientID)
@@ -85,13 +87,13 @@ func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 		}
 
 		// Convert the second part to a float representing the time duration
-		duration, err := strconv.ParseFloat(parts[1], 64)
+		duration, err := strconv.ParseFloat(parts[2], 64)
 		if err != nil {
 			return fmt.Sprintf("ERR: invalid duration: %v", err)
 		}
 
 		// Set expiry using the EX method (duration is in seconds, so we multiply by time.Second)
-		store.EX(parts[0], time.Duration(duration*float64(time.Second)))
+		store.EX(parts[1], time.Duration(duration*float64(time.Second)))
 		return "OK" // Success message
 	case "SAVE":
 		if err := store.SaveSnapshot(); err != nil {
@@ -103,6 +105,28 @@ func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 			return fmt.Sprintf("-ERR Failed to load snapshot: %v\r\n", err)
 		}
 		return "+OK Snapshot restored\r\n"
+
+	case "BGSAVE":
+		// BGSAVE command: Create a snapshot in the background
+		go func() {
+			if err := store.SaveSnapshot(); err != nil {
+				log.Printf("Error saving snapshot: %v", err)
+			}
+		}()
+		return "+OK\r\n"
+
+	case "AOF":
+		// AOF command: Check if AOF is enabled or force AOF rewrite
+		if len(parts) == 2 && strings.ToUpper(parts[1]) == "REWRITE" {
+			// Forcing an AOF rewrite logic can be added here (e.g., compacting the AOF file)
+			return "+OK AOF rewrite triggered\r\n"
+		}
+		if store.enableAOF {
+			return "+AOF is enabled\r\n"
+		} else {
+			return "+AOF is disabled\r\n"
+		}
+
 	case "APPEND":
 		if len(parts) < 3 {
 			return "-ERR APPEND requires key and value"

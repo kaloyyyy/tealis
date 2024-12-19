@@ -45,13 +45,14 @@ func NewRedisClone(aofFilePath, snapshotPath string, enableAOF bool) *RedisClone
 	// Open AOF file if enabled
 	if enableAOF {
 		// Ensure the directory for the snapshot exists
-		dir := r.snapshotPath
+		dir := r.aofFilePath
+		print(dir)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			_ = fmt.Errorf("failed to create directory for snapshot: %w, path: %s", err, dir)
 		}
-		aofFile, err := os.OpenFile(aofFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		aofFile, err := os.OpenFile(aofFilePath+"/aof.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Fatalf("Failed to open AOF file: %v", err)
+			log.Fatalf("Enable AOF Failed to open AOF file: %v", err)
 		}
 		r.AofFile = aofFile
 		r.loadAOF()
@@ -170,7 +171,7 @@ func (r *RedisClone) AppendToAOF(command string) {
 func (r *RedisClone) ensureAOFFileOpen() error {
 	// If AofFile is nil or closed, reopen the file
 	if r.AofFile == nil || r.AofFileClosed() {
-		aofFile, err := os.OpenFile(r.aofFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		aofFile, err := os.OpenFile(r.aofFilePath+"/aof.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return fmt.Errorf("failed to open AOF file: %v", err)
 		}
@@ -188,7 +189,7 @@ func (r *RedisClone) AofFileClosed() bool {
 
 func (r *RedisClone) loadAOF() {
 	r.Mu.RLock()
-	file, err := os.Open(r.aofFilePath)
+	file, err := os.Open(r.aofFilePath + "/aof.txt")
 	if err != nil {
 		log.Printf("Error loading AOF file: %v", err)
 		r.Mu.RUnlock()
@@ -232,15 +233,13 @@ func (r *RedisClone) SaveSnapshot() error {
 	}
 
 	// Ensure the directory for the snapshot exists
-
-	// Ensure the directory for the snapshot exists
 	dir := r.snapshotPath
-	if err := os.MkdirAll(dir[:strings.LastIndex(dir, "/")], 0755); err != nil {
-		return fmt.Errorf("failed to create directory for snapshot: %w, path: %s", err, dir)
+	print(dir)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		_ = fmt.Errorf("failed to create directory for snapshot: %w, path: %s", err, dir)
 	}
-
 	// Create or open the snapshot file
-	file, err := os.Create(r.snapshotPath)
+	file, err := os.Create(r.snapshotPath + "/text.json")
 	if err != nil {
 		return fmt.Errorf("failed to create snapshot file: %w, file loc: %s", err, r.snapshotPath)
 	}
@@ -263,7 +262,7 @@ func (r *RedisClone) LoadSnapshot() error {
 	r.snapshotMutex.Lock()
 	defer r.snapshotMutex.Unlock()
 
-	file, err := os.Open(r.snapshotPath)
+	file, err := os.Open(r.snapshotPath + "/text.json")
 	if err != nil {
 		return fmt.Errorf("failed to open snapshot file: %w", err)
 	}
