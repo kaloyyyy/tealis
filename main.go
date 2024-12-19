@@ -177,7 +177,16 @@ func handleConnectionWithRead(conn net.Conn, store *storage.RedisClone, clientAd
 			log.Printf("Error reading input from client %s: %v", clientAddr, err)
 			continue
 		}
+		// Handle backspace (ASCII value 8)
+		if buf[0] == 8 { // Backspace ASCII value
+			if len(input) > 0 {
+				// Remove the last character from input
+				//input = input[:len(input)-0]
+				//Optionally, send backspace to the client to delete the last character on their screen
+				conn.Write([]byte(" \b \b"))
 
+			}
+		}
 		// Append the read data to the input buffer
 		input = append(input, buf[:n]...)
 
