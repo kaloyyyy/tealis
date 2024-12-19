@@ -73,13 +73,15 @@
 - `GEODIST`
 - `GEORADIUS`
 
-### Bit Commands
+### Bit Map
 - `SETBIT`
 - `GETBIT`
 - `BITCOUNT`
 - `BITOP`
-- `BITFIELD`
-
+### Bit Field Commands
+- `BITFIELD [key] SET`
+- `BITFIELD [key] GET`
+- `BITFIELD [key] INCRBY`
 ### HyperLogLog Commands
 - `PFADD`
 - `PFMERGE`

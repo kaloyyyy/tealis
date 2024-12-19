@@ -718,7 +718,7 @@ func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 		action := parts[2]
 		offset, _ := strconv.Atoi(parts[4])
 		bfCommand := strings.ToUpper(action)
-
+		incrementBy, _ := strconv.Atoi(parts[5])
 		switch bfCommand {
 		case "SET":
 			// Parse the value to set
@@ -731,6 +731,15 @@ func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 			}
 			// Return success
 			return "OK"
+		case "INCRBY":
+
+			value, err := store.IncrByBitfield(myKey, bitType, offset, incrementBy)
+			if err != nil {
+				// Return an error message if the operation fails
+				return fmt.Sprintf("ERROR: %s", err.Error())
+			}
+			// Return success
+			return fmt.Sprintf(":OK  %d", value)
 
 		case "GET":
 			// Call the GetBitfield method
