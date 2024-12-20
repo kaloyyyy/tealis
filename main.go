@@ -28,7 +28,7 @@ func main() {
 
 	// Start background cleanup task for expired keys
 	store.StartCleanup(ctx)
-	store.StartSnapshotScheduler(ctx, 10*time.Second)
+	store.StartSnapshotScheduler(ctx, 5*60*time.Second)
 	// Start WebSocket server on a separate goroutine (e.g., 8080)
 	go func() {
 		http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {

@@ -9,3 +9,26 @@ GET mykey
 SET foo bar
 get foo
 MULTI
+GET key
+SET key value
+GET key
+SET key2 value2
+SET key2 value2
+GET key
+GET key
+GET key
+SET key value
+SET key value
+SET key value
+*1 $4 info
+*1 $4 info
+*1 $4 info
+quit
+set key value
+get key
+multi
+exec
+set key2 value2
+set another value3
+get key2
+get key another

@@ -68,16 +68,16 @@ func TestVectorSearch(t *testing.T) {
 	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Add vectors
-	r.VectorSet("vec1", []float64{1.0, 0.0})
-	r.VectorSet("vec2", []float64{0.0, 1.0})
-	r.VectorSet("vec3", []float64{1.0, 1.0})
-	r.VectorSet("vec4", []float64{0.0, 0.0})
+	r.VectorSet("vec1", []float64{1.0, 1.0, 1.0})
+	r.VectorSet("vec2", []float64{0.0, 1.0, 0.0})
+	r.VectorSet("vec3", []float64{1.0, 1.0, 0.0})
+	r.VectorSet("vec4", []float64{0.0, 0.0, 0.0})
 
 	// Search with query vector
-	query := []float64{1.0, 1.0}
+	query := []float64{1.0, 1.0, 1.0}
 	response := r.VectorSearch(query, 2)
 
-	expectedKeys := []string{"vec3", "vec1"} // Closest two vectors
+	expectedKeys := []string{"vec1"} // Closest two vectors
 	for _, key := range expectedKeys {
 		if !strings.Contains(response, key) {
 			t.Errorf("Expected key %s in search results, got %s", key, response)

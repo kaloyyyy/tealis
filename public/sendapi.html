@@ -340,7 +340,7 @@
                headers: { "Content-Type": "text/plain" },
                body: commandInput,
             });
-
+            console.log("command  ", commandInput)
             const result = await response.text();
             responseOutput.textContent = result;
          } catch (error) {
