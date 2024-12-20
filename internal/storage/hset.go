@@ -1,6 +1,6 @@
 package storage
 
-func (r *RedisClone) HSET(key, field string, value interface{}) int {
+func (r *Tealis) HSET(key, field string, value interface{}) int {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -23,7 +23,7 @@ func (r *RedisClone) HSET(key, field string, value interface{}) int {
 	}
 	return 1
 }
-func (r *RedisClone) HGET(key, field string) (interface{}, bool) {
+func (r *Tealis) HGET(key, field string) (interface{}, bool) {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -38,7 +38,7 @@ func (r *RedisClone) HGET(key, field string) (interface{}, bool) {
 	return value, exists
 }
 
-func (r *RedisClone) HMSET(key string, fields map[string]interface{}) {
+func (r *Tealis) HMSET(key string, fields map[string]interface{}) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -54,7 +54,7 @@ func (r *RedisClone) HMSET(key string, fields map[string]interface{}) {
 		hash[field] = value
 	}
 }
-func (r *RedisClone) HGETALL(key string) map[string]interface{} {
+func (r *Tealis) HGETALL(key string) map[string]interface{} {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -72,7 +72,7 @@ func (r *RedisClone) HGETALL(key string) map[string]interface{} {
 	return result
 }
 
-func (r *RedisClone) HDEL(key string, field string) int {
+func (r *Tealis) HDEL(key string, field string) int {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -90,7 +90,7 @@ func (r *RedisClone) HDEL(key string, field string) int {
 	return 0
 }
 
-func (r *RedisClone) HEXISTS(key, field string) bool {
+func (r *Tealis) HEXISTS(key, field string) bool {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 

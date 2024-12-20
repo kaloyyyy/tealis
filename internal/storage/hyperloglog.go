@@ -93,7 +93,7 @@ func (hll *HyperLogLog) Merge(other *HyperLogLog) {
 	}
 }
 
-func (r *RedisClone) PFAdd(key string, value string) error {
+func (r *Tealis) PFAdd(key string, value string) error {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -112,7 +112,7 @@ func (r *RedisClone) PFAdd(key string, value string) error {
 	return nil
 }
 
-func (r *RedisClone) PFCount(key string) (int64, error) {
+func (r *Tealis) PFCount(key string) (int64, error) {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -125,7 +125,7 @@ func (r *RedisClone) PFCount(key string) (int64, error) {
 	return 0, errors.New("key does not exist") // Key does not exist
 }
 
-func (r *RedisClone) PFMerge(dest string, sources ...string) error {
+func (r *Tealis) PFMerge(dest string, sources ...string) error {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 

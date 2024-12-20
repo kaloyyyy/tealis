@@ -14,8 +14,8 @@ func TestSetBitfield(t *testing.T) {
 	snapshotPath := "./snapshot"
 	// Clean up the ./snapshot folder and files before starting the test
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Test setting an i8 value
 	err := r.SetBitfield("key1", "i8", 0, -128)
@@ -49,8 +49,8 @@ func TestGetBitfield(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	print(r)
 
@@ -88,8 +88,8 @@ func TestIncrByBitfield(t *testing.T) {
 	aofFilePath := "./snapshot"
 	snapshotPath := "./snapshot"
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	print(r)
 	// Set up initial bitfield values

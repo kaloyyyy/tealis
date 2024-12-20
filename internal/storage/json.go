@@ -10,7 +10,7 @@ import (
 )
 
 // JSONSet JSON.SET function (sets a value at a path in a JSON-like structure)
-func (r *RedisClone) JSONSet(key string, path string, value string) error {
+func (r *Tealis) JSONSet(key string, path string, value string) error {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -37,7 +37,7 @@ func (r *RedisClone) JSONSet(key string, path string, value string) error {
 }
 
 // JSONGet retrieves a value from a JSON-like structure
-func (r *RedisClone) JSONGet(key string, path string) (interface{}, error) {
+func (r *Tealis) JSONGet(key string, path string) (interface{}, error) {
 
 	// Retrieve the raw JSON data from the store
 	existing, exists := r.Store[key]
@@ -61,7 +61,7 @@ func (r *RedisClone) JSONGet(key string, path string) (interface{}, error) {
 }
 
 // JSONDel JSON.DEL function (deletes a value from a JSON-like structure)
-func (r *RedisClone) JSONDel(key string, path string) error {
+func (r *Tealis) JSONDel(key string, path string) error {
 	// Remove leading dot if present
 	data, err := r.JSONGet(key, ".")
 	if err != nil {
@@ -225,7 +225,7 @@ func getAtPath(data interface{}, path string) (interface{}, error) {
 }
 
 // JSONArrAppend appends values to an array at the specified path.
-func (r *RedisClone) JSONArrAppend(key string, path string, values []interface{}) error {
+func (r *Tealis) JSONArrAppend(key string, path string, values []interface{}) error {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 	// Remove leading dot if present

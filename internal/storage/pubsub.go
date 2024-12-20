@@ -8,7 +8,7 @@ import (
 )
 
 // Subscribe adds a client to a channel's subscriber list.
-func (r *RedisClone) Subscribe(clientID, channel string) string {
+func (r *Tealis) Subscribe(clientID, channel string) string {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -25,7 +25,7 @@ func (r *RedisClone) Subscribe(clientID, channel string) string {
 }
 
 // Unsubscribe removes a client from a channel's subscriber list.
-func (r *RedisClone) Unsubscribe(clientID, channel string) string {
+func (r *Tealis) Unsubscribe(clientID, channel string) string {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -42,7 +42,7 @@ func (r *RedisClone) Unsubscribe(clientID, channel string) string {
 }
 
 // Publish sends a message to all subscribers of a channel.
-func (r *RedisClone) Publish(channel, message string) string {
+func (r *Tealis) Publish(channel, message string) string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -64,7 +64,7 @@ func (r *RedisClone) Publish(channel, message string) string {
 
 // deliverMessages sends messages from a channel to a client.
 // deliverMessages sends messages from a channel to a client.
-func (r *RedisClone) deliverMessages(clientID string, msgChan chan string) {
+func (r *Tealis) deliverMessages(clientID string, msgChan chan string) {
 	log.Printf("delivering messages to %s in chan: %v", clientID, msgChan)
 	for msg := range msgChan {
 		// Check if the client is a WebSocket connection
@@ -110,13 +110,13 @@ func NewMockClientConnection() *MockClientConnection {
 	return &MockClientConnection{Outbox: make(chan string, 100)}
 }
 
-func (r *RedisClone) AddMockClientConnection(clientID string) {
+func (r *Tealis) AddMockClientConnection(clientID string) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 	r.mockClients[clientID] = NewMockClientConnection()
 }
 
-func (r *RedisClone) GetMockClientConnection(clientID string) *MockClientConnection {
+func (r *Tealis) GetMockClientConnection(clientID string) *MockClientConnection {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 	return r.mockClients[clientID]

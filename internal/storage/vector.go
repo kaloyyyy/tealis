@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (r *RedisClone) VectorSet(key string, vector []float64) string {
+func (r *Tealis) VectorSet(key string, vector []float64) string {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 	r.Store[key] = vector
@@ -18,7 +18,7 @@ func (r *RedisClone) VectorSet(key string, vector []float64) string {
 	return "+OK\r\n"
 }
 
-func (r *RedisClone) VectorGet(key string) string {
+func (r *Tealis) VectorGet(key string) string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 	if value, exists := r.Store[key]; exists {
@@ -31,7 +31,7 @@ func (r *RedisClone) VectorGet(key string) string {
 	return "-ERR Key not found\r\n"
 }
 
-func (r *RedisClone) VectorSearch(query []float64, k int) string {
+func (r *Tealis) VectorSearch(query []float64, k int) string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 

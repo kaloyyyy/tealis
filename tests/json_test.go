@@ -15,8 +15,8 @@ func TestJSONDel(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	key := "testKey"
 	data := `{"key1": "value1", "nested": {"key2": "value2"}}`

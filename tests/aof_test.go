@@ -19,8 +19,8 @@ func TestAOF(t *testing.T) {
 		t.Fatalf("Failed to clean up ./snapshot directory: %v", err)
 	}
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, true)
 	print(r)
 	// Perform operations that modify the database
 	r.Set("key1", "value1", 0)
@@ -33,8 +33,8 @@ func TestAOF(t *testing.T) {
 		t.Errorf("Error saving aof file: %v", err)
 	} // Ensure the operations are logged in the AOF file
 
-	// Create a new RedisClone instance and reload the AOF file
-	r2 := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	// Create a new Tealis instance and reload the AOF file
+	r2 := storage.NewTealis(aofFilePath, snapshotPath, true)
 	err = r2.LoadSnapshot()
 	if err != nil {
 		t.Errorf("Error loading aof file: %v", err)

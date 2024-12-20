@@ -178,7 +178,7 @@ func (s *SortedSet) ZRangeByScore(min, max float64) []string {
 	return result
 }
 
-func (r *RedisClone) ZAdd(key string, score float64, member string) int {
+func (r *Tealis) ZAdd(key string, score float64, member string) int {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -198,7 +198,7 @@ func (r *RedisClone) ZAdd(key string, score float64, member string) int {
 	return 1
 }
 
-func (r *RedisClone) ZRange(key string, start, end int) []string {
+func (r *Tealis) ZRange(key string, start, end int) []string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -212,7 +212,7 @@ func (r *RedisClone) ZRange(key string, start, end int) []string {
 	return nil // Key does not exist
 }
 
-func (r *RedisClone) ZRank(key string, member string) int {
+func (r *Tealis) ZRank(key string, member string) int {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -225,7 +225,7 @@ func (r *RedisClone) ZRank(key string, member string) int {
 	return -1 // Key does not exist
 }
 
-func (r *RedisClone) ZRem(key string, member string) bool {
+func (r *Tealis) ZRem(key string, member string) bool {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -238,7 +238,7 @@ func (r *RedisClone) ZRem(key string, member string) bool {
 	return false // Key does not exist
 }
 
-func (r *RedisClone) ZRangeByScore(key string, min, max float64) []string {
+func (r *Tealis) ZRangeByScore(key string, min, max float64) []string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 

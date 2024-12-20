@@ -12,20 +12,21 @@ import (
 	"syscall"
 	"tealis/internal/protocol"
 	"tealis/internal/storage"
+	"time"
 )
 
 func main() {
 	// Create the Redis clone instance
 	aofFilePath := "./snapshot"
 	snapshotPath := "./snapshot"
-	store := storage.NewRedisClone(aofFilePath, snapshotPath, true)
+	store := storage.NewTealis(aofFilePath, snapshotPath, true)
 	// Create a context for cancellation
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Start background cleanup task for expired keys
 	store.StartCleanup(ctx)
-
+	store.StartSnapshotScheduler(ctx, 10*time.Second)
 	// Start WebSocket server on a separate goroutine (e.g., 8080)
 	go func() {
 		http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +68,7 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func websocketHandler(store *storage.RedisClone, w http.ResponseWriter, r *http.Request) {
+func websocketHandler(store *storage.Tealis, w http.ResponseWriter, r *http.Request) {
 	// Upgrade the HTTP connection to a WebSocket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -128,7 +129,7 @@ func serveFrontend() {
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
-func acceptConnections(listener net.Listener, store *storage.RedisClone) {
+func acceptConnections(listener net.Listener, store *storage.Tealis) {
 	// Continuously accept new client connections
 	for {
 		conn, err := listener.Accept()
@@ -146,7 +147,7 @@ func acceptConnections(listener net.Listener, store *storage.RedisClone) {
 	}
 }
 
-func handleConnectionWithRead(conn net.Conn, store *storage.RedisClone, clientAddr string) {
+func handleConnectionWithRead(conn net.Conn, store *storage.Tealis, clientAddr string) {
 	// Create a buffer to read data from the connection
 	buf := make([]byte, 1024) // buffer to hold data from client
 	var input []byte          // the full command input from the client

@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-func (r *RedisClone) GEOAdd(key string, lat, lon float64, member string) {
+func (r *Tealis) GEOAdd(key string, lat, lon float64, member string) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -24,7 +24,7 @@ func (r *RedisClone) GEOAdd(key string, lat, lon float64, member string) {
 	r.Store[key] = geo
 }
 
-func (r *RedisClone) GEODist(key, member1, member2 string) float64 {
+func (r *Tealis) GEODist(key, member1, member2 string) float64 {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -42,7 +42,7 @@ func (r *RedisClone) GEODist(key, member1, member2 string) float64 {
 	panic("Key does not exist")
 }
 
-func (r *RedisClone) GEOSearch(key string, lat, lon, radius float64) []string {
+func (r *Tealis) GEOSearch(key string, lat, lon, radius float64) []string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 

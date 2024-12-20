@@ -13,8 +13,8 @@ func TestBitFunctions(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	print(r)
 	key1 := "key1"

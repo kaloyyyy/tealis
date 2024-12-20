@@ -20,8 +20,8 @@ func TestSetGet(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Test setting a key-value pair
 	r.Set("key1", "value1", 0)
@@ -43,8 +43,8 @@ func TestSetWithTTL(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Create a cancellable context for cleanup
 	ctx, cancel := context.WithCancel(context.Background())
@@ -73,8 +73,8 @@ func TestDel(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Set and delete a key
 	r.Set("key3", "value3", 0)
@@ -94,8 +94,8 @@ func TestExists(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Set a key and check if it exists
 	r.Set("key4", "value4", 0)
@@ -115,8 +115,8 @@ func TestAppend(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Test appending to a key
 	r.Set("key5", "hello", 0)
@@ -140,8 +140,8 @@ func TestStrLen(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Test string length
 	r.Set("key7", "some value", 0)
@@ -161,8 +161,8 @@ func TestIncrBy(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Test INCRBY with an existing integer key
 	r.Set("key8", "5", 0)
@@ -189,8 +189,8 @@ func TestDecrBy(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Test DECRBY with an existing integer key
 	r.Set("key11", "5", 0)
@@ -212,8 +212,8 @@ func TestGetRange(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 	// Set a string value
 	r.Set("key13", "Hello World", 0)
 
@@ -238,8 +238,8 @@ func TestSetRange(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Test 1: Basic SETRANGE functionality
 	r.Set("key1", "Hello", 0)

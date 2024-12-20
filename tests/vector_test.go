@@ -16,8 +16,8 @@ func TestVectorSetAndGet(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Test VectorSet
 	vector := []float64{1.0, 2.0, 3.0}
@@ -64,8 +64,8 @@ func TestVectorSearch(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	// Add vectors
 	r.VectorSet("vec1", []float64{1.0, 0.0})

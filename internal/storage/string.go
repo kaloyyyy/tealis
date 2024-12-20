@@ -9,7 +9,7 @@ import (
 )
 
 // Set saves a key-value pair with an optional TTL.
-func (r *RedisClone) Set(key, value string, ttl time.Duration) {
+func (r *Tealis) Set(key, value string, ttl time.Duration) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -22,7 +22,7 @@ func (r *RedisClone) Set(key, value string, ttl time.Duration) {
 }
 
 // Get retrieves the value for a key.
-func (r *RedisClone) Get(key string) (string, bool) {
+func (r *Tealis) Get(key string) (string, bool) {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -42,7 +42,7 @@ func (r *RedisClone) Get(key string) (string, bool) {
 }
 
 // Del deletes a key from the store.
-func (r *RedisClone) Del(key string) bool {
+func (r *Tealis) Del(key string) bool {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -55,7 +55,7 @@ func (r *RedisClone) Del(key string) bool {
 }
 
 // Exists checks if a key exists in the store.
-func (r *RedisClone) Exists(key string) bool {
+func (r *Tealis) Exists(key string) bool {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 	_, exists := r.Store[key]
@@ -63,7 +63,7 @@ func (r *RedisClone) Exists(key string) bool {
 }
 
 // Append appends a value to an existing key.
-func (r *RedisClone) Append(key, value string) int {
+func (r *Tealis) Append(key, value string) int {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -76,7 +76,7 @@ func (r *RedisClone) Append(key, value string) int {
 }
 
 // StrLen returns the length of a string value for a key.
-func (r *RedisClone) StrLen(key string) int {
+func (r *Tealis) StrLen(key string) int {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -87,7 +87,7 @@ func (r *RedisClone) StrLen(key string) int {
 }
 
 // IncrBy increments a key by a specified value.
-func (r *RedisClone) IncrBy(key string, increment int) (int, error) {
+func (r *Tealis) IncrBy(key string, increment int) (int, error) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -108,7 +108,7 @@ func (r *RedisClone) IncrBy(key string, increment int) (int, error) {
 }
 
 // GetRange retrieves a substring from a value.
-func (r *RedisClone) GetRange(key string, start, end int) string {
+func (r *Tealis) GetRange(key string, start, end int) string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -143,7 +143,7 @@ func (r *RedisClone) GetRange(key string, start, end int) string {
 }
 
 // SetRange sets a substring at the specified offset.
-func (r *RedisClone) SetRange(key string, offset int, value string) int {
+func (r *Tealis) SetRange(key string, offset int, value string) int {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -162,7 +162,7 @@ func (r *RedisClone) SetRange(key string, offset int, value string) int {
 }
 
 // Keys returns keys that match a pattern.
-func (r *RedisClone) Keys(pattern string) []string {
+func (r *Tealis) Keys(pattern string) []string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 

@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
+func ProcessCommand(parts []string, store *Tealis, clientID string) string {
 	if len(parts) == 0 {
 		return "-ERR Empty command"
 	}
@@ -105,6 +105,20 @@ func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 		// Set expiry using the EX method (duration is in seconds, so we multiply by time.Second)
 		store.EX(parts[1], time.Duration(duration*float64(time.Second)))
 		return "OK" // Success message
+
+	case "TTL":
+		if len(parts) < 2 {
+			return "-ERR TTL requires a key"
+		}
+		key := parts[1]
+
+		return strconv.FormatInt(store.TTL(key), 10)
+	case "PERSIST":
+		if len(parts) < 2 {
+			return "-ERR PERSIST requires a key"
+		}
+		key := parts[1]
+		return strconv.Itoa(store.PERSIST(key))
 	case "SAVE":
 		if err := store.SaveSnapshot(); err != nil {
 			return fmt.Sprintf("-ERR Failed to save snapshot: %v\r\n", err)
@@ -122,6 +136,7 @@ func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 			if err := store.SaveSnapshot(); err != nil {
 				log.Printf("Error saving snapshot: %v", err)
 			}
+
 		}()
 		return "+OK\r\n"
 
@@ -129,6 +144,10 @@ func ProcessCommand(parts []string, store *RedisClone, clientID string) string {
 		// AOF command: Check if AOF is enabled or force AOF rewrite
 		if len(parts) == 2 && strings.ToUpper(parts[1]) == "REWRITE" {
 			// Forcing an AOF rewrite logic can be added here (e.g., compacting the AOF file)
+			err := store.RewriteAOF()
+			if err != nil {
+				return "err rewrite"
+			}
 			return "+OK AOF rewrite triggered\r\n"
 		}
 		if store.enableAOF {

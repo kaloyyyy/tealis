@@ -29,7 +29,7 @@ type Consumer struct {
 // --- Stream Operations ---
 
 // XAdd adds an entry to the stream.
-func (r *RedisClone) XAdd(key string, id string, fields map[string]string) string {
+func (r *Tealis) XAdd(key string, id string, fields map[string]string) string {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -55,7 +55,7 @@ func (r *RedisClone) XAdd(key string, id string, fields map[string]string) strin
 }
 
 // XRead reads entries from streams.
-func (r *RedisClone) XRead(key string, startID string, count int) []StreamEntry {
+func (r *Tealis) XRead(key string, startID string, count int) []StreamEntry {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -82,7 +82,7 @@ func (r *RedisClone) XRead(key string, startID string, count int) []StreamEntry 
 }
 
 // XRange retrieves entries within a range.
-func (r *RedisClone) XRange(key, startID, endID string) []StreamEntry {
+func (r *Tealis) XRange(key, startID, endID string) []StreamEntry {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -104,7 +104,7 @@ func (r *RedisClone) XRange(key, startID, endID string) []StreamEntry {
 }
 
 // XLen returns the length of the stream.
-func (r *RedisClone) XLen(key string) int {
+func (r *Tealis) XLen(key string) int {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -122,7 +122,7 @@ func (r *RedisClone) XLen(key string) int {
 // --- Consumer Group Operations ---
 
 // XGroupCreate CREATE creates a consumer group.
-func (r *RedisClone) XGroupCreate(key, groupName string) bool {
+func (r *Tealis) XGroupCreate(key, groupName string) bool {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -146,7 +146,7 @@ func (r *RedisClone) XGroupCreate(key, groupName string) bool {
 }
 
 // XReadGroup reads entries for a consumer in a group.
-func (r *RedisClone) XReadGroup(key, groupName, consumerName, startID string, count int) []StreamEntry {
+func (r *Tealis) XReadGroup(key, groupName, consumerName, startID string, count int) []StreamEntry {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -184,7 +184,7 @@ func (r *RedisClone) XReadGroup(key, groupName, consumerName, startID string, co
 }
 
 // XAck acknowledges messages for a consumer group.
-func (r *RedisClone) XAck(key, groupName string, ids []string) int {
+func (r *Tealis) XAck(key, groupName string, ids []string) int {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 

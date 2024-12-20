@@ -7,7 +7,7 @@ import (
 )
 
 // RPUSH appends one or more values to the end of a list.
-func (r *RedisClone) RPUSH(key string, values ...string) int {
+func (r *Tealis) RPUSH(key string, values ...string) int {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -23,7 +23,7 @@ func (r *RedisClone) RPUSH(key string, values ...string) int {
 }
 
 // LPUSH prepends one or more values to the beginning of a list.
-func (r *RedisClone) LPUSH(key string, values ...string) int {
+func (r *Tealis) LPUSH(key string, values ...string) int {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -39,7 +39,7 @@ func (r *RedisClone) LPUSH(key string, values ...string) int {
 }
 
 // LPOP removes and returns the first element of the list.
-func (r *RedisClone) LPOP(key string) (string, bool) {
+func (r *Tealis) LPOP(key string) (string, bool) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -54,7 +54,7 @@ func (r *RedisClone) LPOP(key string) (string, bool) {
 }
 
 // RPOP removes and returns the last element of the list.
-func (r *RedisClone) RPOP(key string) (string, bool) {
+func (r *Tealis) RPOP(key string) (string, bool) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -69,7 +69,7 @@ func (r *RedisClone) RPOP(key string) (string, bool) {
 }
 
 // LRANGE returns a slice of elements in the list within the specified range.
-func (r *RedisClone) LRANGE(key string, start, stop int) []string {
+func (r *Tealis) LRANGE(key string, start, stop int) []string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -102,7 +102,7 @@ func (r *RedisClone) LRANGE(key string, start, stop int) []string {
 }
 
 // LLEN retrieves the length of the list stored at the given key.
-func (r *RedisClone) LLEN(key string) int {
+func (r *Tealis) LLEN(key string) int {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 

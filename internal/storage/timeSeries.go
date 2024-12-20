@@ -29,7 +29,7 @@ func NewTimeSeries() *TimeSeries {
 }
 
 // TSCreate TS.CREATE creates a new time series.
-func (r *RedisClone) TSCreate(key string, aggregation string) error {
+func (r *Tealis) TSCreate(key string, aggregation string) error {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -46,7 +46,7 @@ func (r *RedisClone) TSCreate(key string, aggregation string) error {
 }
 
 // TSAdd TS.ADD adds a new data point to the time series.
-func (r *RedisClone) TSAdd(key string, timestamp time.Time, value float64) error {
+func (r *Tealis) TSAdd(key string, timestamp time.Time, value float64) error {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -68,7 +68,7 @@ func (r *RedisClone) TSAdd(key string, timestamp time.Time, value float64) error
 }
 
 // TSRange TS.RANGE returns the time series data points within the specified time range.
-func (r *RedisClone) TSRange(key string, start, end time.Time) ([]DataPoint, error) {
+func (r *Tealis) TSRange(key string, start, end time.Time) ([]DataPoint, error) {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -92,7 +92,7 @@ func (r *RedisClone) TSRange(key string, start, end time.Time) ([]DataPoint, err
 }
 
 // TSGet TS.GET retrieves the latest data point in the time series.
-func (r *RedisClone) TSGet(key string) (DataPoint, error) {
+func (r *Tealis) TSGet(key string) (DataPoint, error) {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -114,7 +114,7 @@ func (r *RedisClone) TSGet(key string) (DataPoint, error) {
 }
 
 // DownSample performs aggregation on the time series data.
-func (r *RedisClone) DownSample(key string, start, end time.Time, interval time.Duration, method string) ([]DataPoint, error) {
+func (r *Tealis) DownSample(key string, start, end time.Time, interval time.Duration, method string) ([]DataPoint, error) {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 

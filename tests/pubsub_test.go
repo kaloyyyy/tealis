@@ -15,8 +15,8 @@ func TestPubSub(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	channel := "test-channel"
 
@@ -69,8 +69,8 @@ func TestMultipleSubscribers(t *testing.T) {
 	aofFilePath := "test.aof"
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	store := storage.NewRedisClone(aofFilePath, "./snapshot", false)
+	// Initialize a Tealis instance with AOF enabled
+	store := storage.NewTealis(aofFilePath, "./snapshot", false)
 	channel := "test-channel"
 
 	// Add multiple mock clients

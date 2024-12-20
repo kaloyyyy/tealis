@@ -1,7 +1,7 @@
 package storage
 
 // SADD adds one or more members to a set.
-func (r *RedisClone) SADD(key string, members ...string) int {
+func (r *Tealis) SADD(key string, members ...string) int {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -22,7 +22,7 @@ func (r *RedisClone) SADD(key string, members ...string) int {
 }
 
 // SREM removes one or more members from a set.
-func (r *RedisClone) SREM(key string, members ...string) int {
+func (r *Tealis) SREM(key string, members ...string) int {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -44,7 +44,7 @@ func (r *RedisClone) SREM(key string, members ...string) int {
 }
 
 // SISMEMBER checks if a member exists in the set.
-func (r *RedisClone) SISMEMBER(key, member string) bool {
+func (r *Tealis) SISMEMBER(key, member string) bool {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -58,7 +58,7 @@ func (r *RedisClone) SISMEMBER(key, member string) bool {
 }
 
 // SMEMBERS returns all members of a set.
-func (r *RedisClone) SMEMBERS(key string) []string {
+func (r *Tealis) SMEMBERS(key string) []string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -77,7 +77,7 @@ func (r *RedisClone) SMEMBERS(key string) []string {
 }
 
 // SUNION returns the union of multiple sets.
-func (r *RedisClone) SUNION(keys ...string) []string {
+func (r *Tealis) SUNION(keys ...string) []string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -104,7 +104,7 @@ func (r *RedisClone) SUNION(keys ...string) []string {
 }
 
 // SINTER returns the intersection of multiple sets.
-func (r *RedisClone) SINTER(keys ...string) []string {
+func (r *Tealis) SINTER(keys ...string) []string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -148,7 +148,7 @@ func (r *RedisClone) SINTER(keys ...string) []string {
 }
 
 // SDIFF returns the difference between multiple sets.
-func (r *RedisClone) SDIFF(keys ...string) []string {
+func (r *Tealis) SDIFF(keys ...string) []string {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 

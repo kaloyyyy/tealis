@@ -5,7 +5,7 @@ import (
 )
 
 // SETBIT sets the bit at the specified offset in the key's value.
-func (r *RedisClone) SETBIT(key string, offset, value int) int {
+func (r *Tealis) SETBIT(key string, offset, value int) int {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -42,7 +42,7 @@ func (r *RedisClone) SETBIT(key string, offset, value int) int {
 }
 
 // GETBIT retrieves the bit at the specified offset in the key's value.
-func (r *RedisClone) GETBIT(key string, offset int) int {
+func (r *Tealis) GETBIT(key string, offset int) int {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -61,7 +61,7 @@ func (r *RedisClone) GETBIT(key string, offset int) int {
 }
 
 // BITCOUNT counts the number of bits set to 1 in the key's value.
-func (r *RedisClone) BITCOUNT(key string) int {
+func (r *Tealis) BITCOUNT(key string) int {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -74,7 +74,7 @@ func (r *RedisClone) BITCOUNT(key string) int {
 }
 
 // BITOP performs bitwise operations between keys and stores the result in a destination key.
-func (r *RedisClone) BITOP(op string, destKey string, keys ...string) {
+func (r *Tealis) BITOP(op string, destKey string, keys ...string) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 

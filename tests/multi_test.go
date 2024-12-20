@@ -10,8 +10,8 @@ func TestMultiExecAndDiscard(t *testing.T) {
 	aofFilePath := "./snapshot"
 	snapshotPath := "./snapshot"
 
-	// Initialize a RedisClone instance
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	clientID := "test_client"
 	// Begin a transaction

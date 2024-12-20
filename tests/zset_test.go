@@ -15,8 +15,8 @@ func TestRedisCloneSortedSet(t *testing.T) {
 
 	defer os.Remove(aofFilePath) // Clean up the test AOF file
 
-	// Initialize a RedisClone instance with AOF enabled
-	r := storage.NewRedisClone(aofFilePath, snapshotPath, false)
+	// Initialize a Tealis instance with AOF enabled
+	r := storage.NewTealis(aofFilePath, snapshotPath, false)
 
 	r.ZAdd("myzset", 1.0, "one")
 	r.ZAdd("myzset", 2.0, "two")

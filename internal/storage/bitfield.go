@@ -7,7 +7,7 @@ import (
 )
 
 // SetBitfield sets values in the bitfield at a given offset.
-func (r *RedisClone) SetBitfield(key string, bitType string, offset int, value int) error {
+func (r *Tealis) SetBitfield(key string, bitType string, offset int, value int) error {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -52,7 +52,7 @@ func (r *RedisClone) SetBitfield(key string, bitType string, offset int, value i
 }
 
 // GetBitfield gets the value stored at the given offset for a specified type.
-func (r *RedisClone) GetBitfield(key string, bitType string, offset int) (int, error) {
+func (r *Tealis) GetBitfield(key string, bitType string, offset int) (int, error) {
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
@@ -73,7 +73,7 @@ func (r *RedisClone) GetBitfield(key string, bitType string, offset int) (int, e
 }
 
 // IncrByBitfield increments the value of the bitfield at a given offset by a specified increment.
-func (r *RedisClone) IncrByBitfield(key string, bitType string, offset int, increment int) (int, error) {
+func (r *Tealis) IncrByBitfield(key string, bitType string, offset int, increment int) (int, error) {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -155,7 +155,7 @@ func getBitfieldSize(bitType string) int {
 }
 
 // Helper function to set a bitfield value at a specified offset
-func (r *RedisClone) setBitfieldValue(bitfield []byte, offset int, value int, size int, key string) error {
+func (r *Tealis) setBitfieldValue(bitfield []byte, offset int, value int, size int, key string) error {
 	// Ensure the bitfield has enough space
 	requiredBytes := (offset + size + 7) / 8 // Round up to ensure enough space
 	if len(bitfield) < requiredBytes {
