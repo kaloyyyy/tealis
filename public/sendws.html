@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Tealis Frontend</title>
+   <style>
+       body {
+           font-family: Arial, sans-serif;
+           text-align: center;
+           margin: 2em;
+       }
+
+       #app {
+           max-width: 600px;
+           margin: 0 auto;
+       }
+
+       select, input {
+           width: 80%;
+           padding: 10px;
+           margin-bottom: 10px;
+           font-size: 16px;
+       }
+
+       button {
+           padding: 10px 20px;
+           font-size: 16px;
+           cursor: pointer;
+       }
+
+       #responseOutput {
+           margin-top: 20px;
+           padding: 10px;
+           border: 1px solid #ccc;
+           background: #f9f9f9;
+       }
+
+       .input-group {
+           margin-bottom: 10px;
+       }
+
+       #wsStatus {
+           margin-top: 20px;
+           font-size: 16px;
+           font-weight: bold;
+       }
+
+       .connected {
+           color: green;
+       }
+
+       .disconnected {
+           color: red;
+       }
+   </style>
+</head>
+<body>
+<h1>Tealis Command Interface</h1>
+<div id="app">
+   <!-- WebSocket connection status -->
+   <div id="wsStatus" class="disconnected">Not Connected to WebSocket</div>
+
+   <!-- Command Category Dropdown -->
+   <select id="commandCategorySelect">
+      <option value="general">General</option>
+      <option value="json">JSON</option>
+      <option value="list">List</option>
+      <option value="set">Set</option>
+      <option value="hash">Hash</option>
+      <option value="sorted_set">Sorted Set</option>
+      <option value="stream">Stream</option>
+      <option value="geospatial">Geospatial</option>
+      <option value="bitmap">Bitmap</option>
+      <option value="hyperloglog">HyperLogLog</option>
+      <option value="timeseries">Time Series</option>
+      <option value="pubsub">Pub/Sub</option>
+      <option value="vector">Vector</option>
+   </select>
+
+   <!-- Command Dropdown -->
+   <select id="commandSelect">
+      <!-- Initially empty; will be populated based on category selection -->
+   </select>
+
+   <!-- Dynamic Inputs based on command selection -->
+   <div id="dynamicInputs"></div>
+
+   <button id="sendCommand">Send Command</button>
+
+   <div id="responseOutput"></div>
+</div>
+
+<script>
+   const commands = {
+      general: [
+         "MULTI", "EXEC", "DISCARD", "SET", "GET", "DEL", "EXISTS", "EX", "TTL", "PERSIST",
+         "QUIT", "SAVE", "BGSAVE", "RESTORE", "AOF", "APPEND", "STRLEN", "INCR", "DECR",
+         "INCRBY", "DECRBY", "GETRANGE", "SETRANGE", "KEYS"
+      ],
+      json: [
+         "JSON.SET", "JSON.GET", "JSON.DEL", "JSON.ARRAPPEND"
+      ],
+      list: [
+         "LPUSH", "RPUSH", "LPOP", "RPOP", "LLEN", "LRANGE"
+      ],
+      set: [
+         "SADD", "SMEMBERS", "SREM", "SISMEMBER"
+      ],
+      hash: [
+         "HSET", "HGET", "HMSET", "HGETALL", "HDEL", "HEXISTS"
+      ],
+      sorted_set: [
+         "ZADD", "ZRANGE", "ZRANK", "ZREM", "ZRANGEBYSCORE"
+      ],
+      stream: [
+         "XADD", "XREAD", "XRANGE", "XLEN", "XGROUP", "XREADGROUP", "XACK"
+      ],
+      geospatial: [
+         "GEOADD", "GEODIST", "GEORADIUS"
+      ],
+      bitmap: [
+         "SETBIT", "GETBIT", "BITCOUNT", "BITOP"
+      ],
+      hyperloglog: [
+         "PFADD", "PFMERGE", "PFCOUNT"
+      ],
+      timeseries: [
+         "TS.CREATE", "TS.ADD", "TS.RANGE", "TS.GET"
+      ],
+      pubsub: [
+         "SUBSCRIBE", "UNSUBSCRIBE", "PUBLISH"
+      ],
+      vector: [
+         "VECTOR.SET", "VECTOR.GET", "VECTOR.SEARCH"
+      ]
+   };
+
+   const commandArgs = {
+      "SET": ["key", "value"],
+      "GET": ["key"],
+      "DEL": ["key"],
+      "EXISTS": ["key"],
+      "EX": ["key", "time_in_sec"],
+      "TTL": ["key"],
+      "PERSIST": ["key"],
+      "MULTI": [],
+      "EXEC": [],
+      // Other commands omitted for brevity...
+   };
+
+   // Populate command dropdown based on category selection
+   const commandCategorySelect = document.getElementById("commandCategorySelect");
+   const commandSelect = document.getElementById("commandSelect");
+
+   function updateCommandDropdown() {
+      const category = commandCategorySelect.value;
+      const categoryCommands = commands[category] || [];
+
+      commandSelect.innerHTML = ""; // Clear existing options
+      categoryCommands.forEach(command => {
+         const option = document.createElement("option");
+         option.value = command;
+         option.textContent = command;
+         commandSelect.appendChild(option);
+      });
+
+      updateDynamicInputs();
+   }
+
+   commandCategorySelect.addEventListener("change", updateCommandDropdown);
+   commandSelect.addEventListener("change", updateDynamicInputs);
+
+   // Initialize dropdown
+   updateCommandDropdown();
+
+   // WebSocket setup
+   const socket = new WebSocket('ws://localhost:8080/ws');
+   const wsStatus = document.getElementById("wsStatus");
+
+   socket.onopen = () => {
+      console.log("WebSocket connection established.");
+      wsStatus.textContent = "Connected to WebSocket";
+      wsStatus.classList.remove("disconnected");
+      wsStatus.classList.add("connected");
+   };
+
+   socket.onmessage = (event) => {
+      const responseOutput = document.getElementById("responseOutput");
+      responseOutput.textContent = event.data;
+   };
+
+   socket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      wsStatus.textContent = "Error: WebSocket connection failed";
+      wsStatus.classList.remove("connected");
+      wsStatus.classList.add("disconnected");
+   };
+
+   socket.onclose = () => {
+      console.log("WebSocket connection closed.");
+      wsStatus.textContent = "Disconnected from WebSocket";
+      wsStatus.classList.remove("connected");
+      wsStatus.classList.add("disconnected");
+   };
+
+   // Modify the updateDynamicInputs function to handle MULTI
+   function updateDynamicInputs() {
+      const selectedCommand = commandSelect.value;
+      const args = commandArgs[selectedCommand] || [];
+
+      // Clear existing dynamic inputs
+      const dynamicInputsDiv = document.getElementById("dynamicInputs");
+      dynamicInputsDiv.innerHTML = "";
+
+      // Special case for MULTI command
+      if (selectedCommand === "MULTI") {
+         // No inputs for MULTI command itself, just show a message
+         dynamicInputsDiv.innerHTML = "<p>Start adding commands to the transaction...</p>";
+         return;
+      }
+
+      // Generate input fields based on the command arguments
+      args.forEach(arg => {
+         const inputGroup = document.createElement("div");
+         inputGroup.classList.add("input-group");
+
+         const label = document.createElement("label");
+         label.textContent = `Enter ${arg}:`;
+
+         const input = document.createElement("input");
+         input.id = `${selectedCommand}_${arg}`;
+         input.type = "text";
+         input.placeholder = `Enter ${arg}`;
+
+         inputGroup.appendChild(label);
+         inputGroup.appendChild(input);
+         dynamicInputsDiv.appendChild(inputGroup);
+      });
+   }
+
+   let multiCommands = [];  // Store commands for MULTI
+
+   // Handle sending command to WebSocket
+   document.getElementById("sendCommand").addEventListener("click", () => {
+      const command = commandSelect.value;
+      const responseOutput = document.getElementById("responseOutput");
+      let commandInput = command;
+
+      // Collect arguments for the selected command
+      const args = commandArgs[command] || [];
+      if (args.length > 0) {
+         args.forEach(arg => {
+            const value = document.getElementById(`${command}_${arg}`).value.trim();
+            if (value) {
+               commandInput += ` ${value}`;
+            } else {
+               responseOutput.textContent = `Please enter all required arguments for ${command}.`;
+               return;
+            }
+         });
+      }
+
+      // Handle MULTI command
+      if (command === "MULTI") {
+         multiCommands = [];  // Clear previous MULTI commands
+         responseOutput.textContent = "Transaction started. Add commands and then execute with EXEC.";
+         return;
+      }
+
+      if (command === "EXEC") {
+         if (multiCommands.length === 0) {
+            responseOutput.textContent = "No commands in the transaction to execute.";
+            return;
+         }
+         // Send all commands in the transaction
+         const transactionCommands = multiCommands.join("\n");
+         if (socket.readyState === WebSocket.OPEN) {
+            socket.send(transactionCommands);
+            responseOutput.textContent = "Transaction executed.";
+         }
+         multiCommands = []; // Clear after execution
+         return;
+      }
+
+      // If not MULTI or EXEC, send the single command
+      if (socket.readyState === WebSocket.OPEN) {
+         socket.send(commandInput);
+         responseOutput.textContent = `Sent command: ${commandInput}`;
+      } else {
+         responseOutput.textContent = "WebSocket connection not established.";
+      }
+
+      // If part of a MULTI transaction, add it to the multiCommands list
+      if (multiCommands.length > 0) {
+         multiCommands.push(commandInput);
+         responseOutput.textContent = `${command} added to transaction. Add more or execute with EXEC.`;
+      }
+   });
+</script>
+</body>
+</html>

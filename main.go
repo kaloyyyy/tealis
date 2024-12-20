@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/gorilla/websocket"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -35,7 +37,12 @@ func main() {
 		log.Println("WebSocket server is running on port 8080...")
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
-
+	// Start HTTP command API server
+	go func() {
+		http.Handle("/command", handleCommand(store))
+		log.Println("HTTP command API server is running on port 8081...")
+		log.Fatal(http.ListenAndServe(":8081", nil))
+	}()
 	// Start HTTP server for the frontend on port 8081
 	go serveFrontend()
 
@@ -231,4 +238,44 @@ func cleanBytes(data []byte) []byte {
 		}
 	}
 	return result
+}
+
+// HTTP handler for processing raw Redis commands
+func handleCommand(store *storage.Tealis) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Only POST method is supported", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Read the raw command string from the request body
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil || len(body) == 0 {
+			http.Error(w, "Invalid or empty command", http.StatusBadRequest)
+			return
+		}
+		defer r.Body.Close()
+
+		// Parse the command string into parts
+		commandString := strings.TrimSpace(string(body))
+		if commandString == "" {
+			http.Error(w, "Empty command received", http.StatusBadRequest)
+			return
+		}
+
+		parts := protocol.ParseCommand(commandString)
+		if len(parts) == 0 {
+			http.Error(w, "Malformed command", http.StatusBadRequest)
+			return
+		}
+
+		// Process the command using ProcessCommand
+		clientID := "HTTP_CLIENT" // Use a generic client ID for HTTP requests
+		response := storage.ProcessCommand(parts, store, clientID)
+
+		// Send the response back to the client
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, response)
+	}
 }

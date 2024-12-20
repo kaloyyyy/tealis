@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Tealis Frontend</title>
+   <style>
+       body {
+           font-family: Arial, sans-serif;
+           text-align: center;
+           margin: 2em;
+       }
+
+       #app {
+           max-width: 600px;
+           margin: 0 auto;
+       }
+
+       select, input {
+           width: 80%;
+           padding: 10px;
+           margin-bottom: 10px;
+           font-size: 16px;
+       }
+
+       button {
+           padding: 10px 20px;
+           font-size: 16px;
+           cursor: pointer;
+       }
+
+       #responseOutput {
+           margin-top: 20px;
+           padding: 10px;
+           border: 1px solid #ccc;
+           background: #f9f9f9;
+       }
+
+       .input-group {
+           margin-bottom: 10px;
+       }
+   </style>
+</head>
+<body>
+<h1>Tealis Command Interface</h1>
+<h3>HTTP API</h3>
+<div id="app">
+   <!-- Command Category Dropdown -->
+   <select id="commandCategorySelect">
+      <option value="general">General</option>
+      <option value="json">JSON</option>
+      <option value="list">List</option>
+      <option value="set">Set</option>
+      <option value="hash">Hash</option>
+      <option value="sorted_set">Sorted Set</option>
+      <option value="stream">Stream</option>
+      <option value="geospatial">Geospatial</option>
+      <option value="bitmap">Bitmap</option>
+      <option value="hyperloglog">HyperLogLog</option>
+      <option value="timeseries">Time Series</option>
+      <option value="pubsub">Pub/Sub</option>
+      <option value="vector">Vector</option>
+   </select>
+
+   <!-- Command Dropdown -->
+   <select id="commandSelect">
+      <!-- Initially empty; will be populated based on category selection -->
+   </select>
+
+   <!-- Key Input -->
+
+
+   <!-- Dynamic Inputs based on command selection -->
+   <div id="dynamicInputs"></div>
+
+   <button id="sendCommand">Send Command</button>
+
+   <div id="responseOutput"></div>
+</div>
+
+<script>
+   const commands = {
+      general: [
+         "MULTI", "EXEC", "DISCARD", "SET", "GET", "DEL", "EXISTS", "EX", "TTL", "PERSIST",
+         "QUIT", "SAVE", "BGSAVE", "RESTORE", "AOF", "APPEND", "STRLEN", "INCR", "DECR",
+         "INCRBY", "DECRBY", "GETRANGE", "SETRANGE", "KEYS"
+      ],
+      json: [
+         "JSON.SET", "JSON.GET", "JSON.DEL", "JSON.ARRAPPEND"
+      ],
+      list: [
+         "LPUSH", "RPUSH", "LPOP", "RPOP", "LLEN", "LRANGE"
+      ],
+      set: [
+         "SADD", "SMEMBERS", "SREM", "SISMEMBER"
+      ],
+      hash: [
+         "HSET", "HGET", "HMSET", "HGETALL", "HDEL", "HEXISTS"
+      ],
+      sorted_set: [
+         "ZADD", "ZRANGE", "ZRANK", "ZREM", "ZRANGEBYSCORE"
+      ],
+      stream: [
+         "XADD", "XREAD", "XRANGE", "XLEN", "XGROUP", "XREADGROUP", "XACK"
+      ],
+      geospatial: [
+         "GEOADD", "GEODIST", "GEORADIUS"
+      ],
+      bitmap: [
+         "SETBIT", "GETBIT", "BITCOUNT", "BITOP"
+      ],
+      hyperloglog: [
+         "PFADD", "PFMERGE", "PFCOUNT"
+      ],
+      timeseries: [
+         "TS.CREATE", "TS.ADD", "TS.RANGE", "TS.GET"
+      ],
+      pubsub: [
+         "SUBSCRIBE", "UNSUBSCRIBE", "PUBLISH"
+      ],
+      vector: [
+         "VECTOR.SET", "VECTOR.GET", "VECTOR.SEARCH"
+      ]
+   };
+
+   const commandArgs = {
+      "SET": ["key", "value"],
+      "GET": ["key"],
+      "DEL": ["key"],
+      "EXISTS": ["key"],
+      "EX": ["key", "time_in_sec"],
+      "TTL": ["key"],
+      "PERSIST": ["key"],
+      "MULTI": ["commands"],
+      "EXEC": [],
+      "DISCARD": [],
+      "SAVE": [],
+      "BGSAVE": [],
+      "RESTORE": ["key", "dump_file"],
+      "AOF": [],
+      "APPEND": ["key", "value"],
+      "STRLEN": ["key"],
+      "INCR": ["key"],
+      "DECR": ["key"],
+      "INCRBY": ["key", "value"],
+      "DECRBY": ["key", "value"],
+      "GETRANGE": ["key", "start", "end"],
+      "SETRANGE": ["key", "offset", "value"],
+      "KEYS": ["pattern"],
+
+      "JSON.SET": ["key", "path", "value"],
+      "JSON.GET": ["key", "path"],
+      "JSON.DEL": ["key", "path"],
+      "JSON.ARRAPPEND": ["key", "path", "value"],
+
+      "LPUSH": ["key", "value"],
+      "RPUSH": ["key", "value"],
+      "LPOP": ["key"],
+      "RPOP": ["key"],
+      "LLEN": ["key"],
+      "LRANGE": ["key", "start", "stop"],
+
+      "SADD": ["key", "value"],
+      "SMEMBERS": ["key"],
+      "SREM": ["key", "value"],
+      "SISMEMBER": ["key", "value"],
+
+      "HSET": ["key", "field", "value"],
+      "HGET": ["key", "field"],
+      "HMSET": ["key", "field-value pairs"],
+      "HGETALL": ["key"],
+      "HDEL": ["key", "field"],
+      "HEXISTS": ["key", "field"],
+
+      "ZADD": ["key", "score", "value"],
+      "ZRANGE": ["key", "start", "stop"],
+      "ZRANK": ["key", "member"],
+      "ZREM": ["key", "member"],
+      "ZRANGEBYSCORE": ["key", "min", "max"],
+
+      "XADD": ["key", "id", "field-value pairs"],
+      "XREAD": ["key", "id"],
+      "XRANGE": ["key", "start", "end"],
+      "XLEN": ["key"],
+      "XGROUP": ["subcommand"],
+      "XREADGROUP": ["group", "consumer", "key"],
+      "XACK": ["key", "group", "id"],
+
+      "GEOADD": ["key", "longitude", "latitude", "member"],
+      "GEODIST": ["key", "member1", "member2", "*unit"],
+      "GEORADIUS": ["key", "longitude", "latitude", "radius", "*unit"],
+
+      "SETBIT": ["key", "offset", "value"],
+      "GETBIT": ["key", "offset"],
+      "BITCOUNT": ["key"],
+      "BITOP": ["operation", "destkey", "key..."],
+
+      "PFADD": ["key", "element"],
+      "PFMERGE": ["destkey", "sourcekeys..."],
+      "PFCOUNT": ["key"],
+
+      "TS.CREATE": ["key"],
+      "TS.ADD": ["key", "timestamp", "value"],
+      "TS.RANGE": ["key", "start", "end"],
+      "TS.GET": ["key"],
+
+      "SUBSCRIBE": ["channel"],
+      "UNSUBSCRIBE": ["channel"],
+      "PUBLISH": ["channel", "message"],
+
+      "VECTOR.SET": ["key", "vector"],
+      "VECTOR.GET": ["key"],
+      "VECTOR.SEARCH": ["key", "query"]
+   };
+
+   // Populate command dropdown based on category selection
+   const commandCategorySelect = document.getElementById("commandCategorySelect");
+   const commandSelect = document.getElementById("commandSelect");
+
+   function updateCommandDropdown() {
+      const category = commandCategorySelect.value;
+      const categoryCommands = commands[category] || [];
+
+      commandSelect.innerHTML = ""; // Clear existing options
+      categoryCommands.forEach(command => {
+         const option = document.createElement("option");
+         option.value = command;
+         option.textContent = command;
+         commandSelect.appendChild(option);
+      });
+
+      updateDynamicInputs();
+   }
+
+   commandCategorySelect.addEventListener("change", updateCommandDropdown);
+   commandSelect.addEventListener("change", updateDynamicInputs);
+
+   // Initialize dropdown
+   updateCommandDropdown();
+
+   // Add a global array to store queued commands for MULTI
+   let multiCommands = [];
+
+   // Modify the updateDynamicInputs function to handle MULTI
+   function updateDynamicInputs() {
+      const selectedCommand = commandSelect.value;
+      const args = commandArgs[selectedCommand] || [];
+
+      // Clear existing dynamic inputs
+      const dynamicInputsDiv = document.getElementById("dynamicInputs");
+      dynamicInputsDiv.innerHTML = "";
+
+      // Special case for MULTI command
+      if (selectedCommand === "MULTI") {
+         // No inputs for MULTI command itself, just show a message
+         dynamicInputsDiv.innerHTML = "<p>Start adding commands to the transaction...</p>";
+         return;
+      }
+
+      // Generate input fields based on the command arguments
+      args.forEach(arg => {
+         const inputGroup = document.createElement("div");
+         inputGroup.classList.add("input-group");
+
+         const label = document.createElement("label");
+         label.textContent = `Enter ${arg}:`;
+
+         const input = document.createElement("input");
+         input.id = `${selectedCommand}_${arg}`;
+         input.type = "text";
+         input.placeholder = `Enter ${arg}`;
+
+         inputGroup.appendChild(label);
+         inputGroup.appendChild(input);
+         dynamicInputsDiv.appendChild(inputGroup);
+      });
+   }
+
+   // Handle sending command to backend
+   document.getElementById("sendCommand").addEventListener("click", async () => {
+      const command = commandSelect.value;
+      const responseOutput = document.getElementById("responseOutput");
+      let commandInput = command;
+
+      if (command === "MULTI") {
+         // Start a transaction and prepare to queue commands
+         multiCommands = []; // Clear previous multi commands
+         responseOutput.textContent = "Transaction started. Add commands and then execute with EXEC.";
+         return;
+      }
+
+      if (command === "EXEC") {
+         // Execute the transaction
+         if (multiCommands.length === 0) {
+            responseOutput.textContent = "No commands in transaction to execute.";
+            return;
+         }
+
+         // Send all commands in the transaction
+         const transactionCommands = `MULTI\n${multiCommands.join("\n")}\nEXEC`;
+
+         try {
+            const response = await fetch("http://localhost:8081/command", {
+               method: "POST",
+               headers: { "Content-Type": "text/plain" },
+               body: transactionCommands,
+            });
+
+            const result = await response.text();
+            responseOutput.textContent = result;
+         } catch (error) {
+            responseOutput.textContent = `Error: ${error.message}`;
+         }
+
+         return;
+      }
+
+      // Collect arguments for the selected command
+      const args = commandArgs[command] || [];
+      if (args.length > 0) {
+         args.forEach(arg => {
+            const value = document.getElementById(`${command}_${arg}`).value.trim();
+            if (value) {
+               commandInput += ` ${value}`;
+            } else {
+               responseOutput.textContent = `Please enter all required arguments for ${command}.`;
+               return;
+            }
+         });
+      }
+
+      // If it's part of a MULTI transaction, add it to the multiCommands array
+      if (multiCommands.length > 0) {
+         multiCommands.push(commandInput);
+         responseOutput.textContent = `${command} added to transaction. Add more or execute with EXEC.`;
+      } else {
+         try {
+            const response = await fetch("http://localhost:8081/command", {
+               method: "POST",
+               headers: { "Content-Type": "text/plain" },
+               body: commandInput,
+            });
+
+            const result = await response.text();
+            responseOutput.textContent = result;
+         } catch (error) {
+            responseOutput.textContent = `Error: ${error.message}`;
+         }
+      }
+   });
+</script>
+</body>

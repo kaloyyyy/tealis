@@ -4,3 +4,8 @@ set hello world
 JSON.SET key . { "key": "value1", "nested": { "key2": "value2" }, "arr": ["first", "second", "third"] }
 JSON.GET key .
 JSON.arrappend key .arr hello, world
+SET mykey sample value
+GET mykey
+SET foo bar
+get foo
+MULTI

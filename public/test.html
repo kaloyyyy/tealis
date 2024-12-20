@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Tealis CLI WebSocket</title>
+</head>
+<body>
+<h2>Tealis Command Selector</h2>
+
+<label for="commandSelector">Select Command:</label>
+<select id="commandSelector">
+   <option value="SET mykey 'sample value'">SET mykey 'sample value'</option>
+   <option value="GET mykey">GET mykey</option>
+   <option value="DEL mykey">DEL mykey</option>
+   <option value="JSON.SET mykey . '{ \"name\": \"John\", \"age\": 30 }'">JSON.SET mykey . '{ "name": "John", "age": 30 }'</option>
+   <option value="LPUSH mylist 'value1'">LPUSH mylist 'value1'</option>
+   <option value="ZRANGE mysortedset 0 -1">ZRANGE mysortedset 0 -1</option>
+   <option value="TS.CREATE mytimeseries">TS.CREATE mytimeseries</option>
+   <option value="PUBLISH mychannel 'Hello, world!'">PUBLISH mychannel 'Hello, world!'</option>
+</select>
+
+<button id="sendButton">Send Command</button>
+
+<h3>Response:</h3>
+<div id="response" style="border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: scroll;"></div>
+
+<script>
+   // Connect to WebSocket server
+   const socket = new WebSocket("ws://localhost:8080/ws");
+   const responseDiv = document.getElementById("response");
+   const sendButton = document.getElementById("sendButton");
+   const commandSelector = document.getElementById("commandSelector");
+
+   // Handle connection open
+   socket.onopen = () => {
+      responseDiv.innerHTML += "Connected to server<br>";
+   };
+
+   // Handle incoming messages
+   socket.onmessage = (event) => {
+      responseDiv.innerHTML += `<div>${event.data}</div>`;
+      responseDiv.scrollTop = responseDiv.scrollHeight; // Auto-scroll to bottom
+   };
+
+   // Handle connection close
+   socket.onclose = () => {
+      responseDiv.innerHTML += "Disconnected from server<br>";
+   };
+
+   // Handle send button click
+   sendButton.addEventListener("click", () => {
+      const command = commandSelector.value.trim();
+      if (command) {
+         socket.send(command); // Send command to server
+      }
+   });
+</script>
+</body>
+</html>
