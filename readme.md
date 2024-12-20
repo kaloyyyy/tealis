@@ -1,7 +1,7 @@
 # Tealis CLI Commands
 `telnet 127.0.0.1 6379` in CMD to connect
-`localhost:8000` open in your browser
-`localhost:8081` for HTTP API requests
+`http://localhost:8000/sendws.html` or `http://localhost:8081/sendapi.html` open in your browser
+`localhost:8081/command` for HTTP API requests
 ## General Commands
 - `MULTI` - Marks the start of a transaction.
 - `EXEC` - Executes all commands issued after `MULTI`.
