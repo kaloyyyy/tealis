@@ -27,6 +27,7 @@ type Tealis struct {
 	enableAOF     bool     // Flag to enable/disable AOF
 	snapshotPath  string   // Path to the snapshot file
 	snapshotMutex sync.Mutex
+	wsWriteMutex  sync.Mutex // Mutex for synchronizing WebSocket writes
 }
 
 func NewTealis(aofFilePath, snapshotPath string, enableAOF bool) *Tealis {

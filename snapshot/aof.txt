@@ -32,3 +32,185 @@ set key2 value2
 set another value3
 get key2
 get key another
+*3 $4 auth $7 default $0 *1 $4 info
+*3 $4 auth $7 default $0
+*1 $4 info
+*3 $4 auth $7 default $0
+*1 $4 info
+get key
+set key value
+restore
+get keys
+keys
+keys *
+SET key value
+GET key
+GET another
+GET another
+GET another
+GET another
+GET another
+GET another
+GET key
+get key
+subscribe channel
+subscribe channel
+publish newmessage
+publich channel newmessage
+publish channel newmessage
+subscribe channel
+publish channel hellofrontend
+publish channel anothermessage
+publish channel helloCLI
+subscribe channel
+publish channel hello
+SUBSCRIBE channel
+PUBLISH channel hello
+SUBSCRIBE channel
+PUBLISH channel hello
+SUBSCRIBE channel
+PUBLISH channel hello
+SUBSCRIBE channel
+PUBLISH channel hello
+SUBSCRIBE channel
+PUBLISH channel hello
+SUBSCRIBE channel
+publish channel hello
+subscribe channel
+publish channel hello again
+restore
+publish channel hello
+SUBSCRIBE channel
+publish channel hello
+subscribe channel
+save
+PUBLISH channel hello
+PUBLISH channel hello
+SUBSCRIBE channel
+PUBLISH channel hello agen
+subscribe chan
+publish chan hello
+subscribe ch
+subscribe ch
+publish ch hello
+quit
+PUBLISH ch hello
+set key value
+subscribe ch
+subscribe ch
+publish ch hello
+subscribe ch
+subscribe ch
+publish ch hello
+subscribe ch
+subscribe ch
+publish ch hello
+publish ch hellagg
+subscribe ch
+subscribe ch
+publish ch hello
+publish hello
+publish ch helloagen
+subscribe ch
+publish ch hello
+publish ch helloagen
+sub
+subscribe ch
+publish ch he
+subscribe ch
+publish ch hello
+subscribe ch
+subscribe ch
+publish ch hello
+publish ch hellooo
+SUBSCRIBE ch
+PUBLISH ch hello
+subscribe yes
+publish yes yes
+SUBSCRIBE yes
+PUBLISH yes hello v2
+publish yes helloooo
+SUBSCRIBE yes
+PUBLISH yes helloyes
+PUBLISH yes helloyes
+SUBSCRIBE yes
+PUBLISH yes hello
+SUBSCRIBE ch
+PUBLISH ch hello ch
+subscribe ch
+publish ch hello
+subscribe yes
+publish yes hello
+subscribe yes
+publish yes hello
+sub chan
+publish chan heello
+sub chan
+set key value
+sub chan
+pub chan hello
+pub chan hellofrontend
+sub chan
+pub chan ehee
+SUBSCRIBE channel
+SUBSCRIBE ch
+SUBSCRIBE ch
+SET v vv
+SUBSCRIBE channel
+sub ch
+sub chan
+SUBSCRIBE ch
+SUBSCRIBE channel
+GET key
+SUBSCRIBE channel
+SUBSCRIBE channel
+SUBSCRIBE ch
+PUBLISH ch hello
+SUBSCRIBE ch
+SUBSCRIBE ch
+SUBSCRIBE ch
+PUBLISH ch hello
+SET key value
+SET key value
+SET key value
+SET key value
+SET key value
+SET key value
+SET key value
+SET key value
+SET key value
+SET key value
+SET key value
+SET key value
+SUBSCRIBE ch
+SUBSCRIBE ch
+SUBSCRIBE ch
+SUBSCRIBE cc
+SUBSCRIBE cc
+SUBSCRIBE cc
+SUBSCRIBE cc
+SET key value
+SET key value
+multi
+exec
+set key val
+SET key value
+GET key
+multi
+exec
+set key value
+get key value
+MULTI
+MULTI
+EXEC
+MULTI
+EXEC
+SET k v
+GET k
+EXEC
+MULTI
+EXEC
+MULTI
+EXEC
+MULTI
+EXEC

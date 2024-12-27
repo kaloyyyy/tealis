@@ -34,6 +34,7 @@
            padding: 10px;
            border: 1px solid #ccc;
            background: #f9f9f9;
+           text-align: left;
        }
 
        .input-group {
@@ -93,6 +94,7 @@
 </div>
 
 <script>
+   var multiStatus = false;
    const commands = {
       general: [
          "MULTI", "EXEC", "DISCARD", "SET", "GET", "DEL", "EXISTS", "EX", "TTL", "PERSIST",
@@ -147,7 +149,84 @@
       "PERSIST": ["key"],
       "MULTI": [],
       "EXEC": [],
-      // Other commands omitted for brevity...
+      "DISCARD": [],
+      "SAVE": [],
+      "BGSAVE": [],
+      "RESTORE": ["key", "dump_file"],
+      "AOF": [],
+      "APPEND": ["key", "value"],
+      "STRLEN": ["key"],
+      "INCR": ["key"],
+      "DECR": ["key"],
+      "INCRBY": ["key", "value"],
+      "DECRBY": ["key", "value"],
+      "GETRANGE": ["key", "start", "end"],
+      "SETRANGE": ["key", "offset", "value"],
+      "KEYS": ["pattern"],
+
+      "JSON.SET": ["key", "path", "value"],
+      "JSON.GET": ["key", "path"],
+      "JSON.DEL": ["key", "path"],
+      "JSON.ARRAPPEND": ["key", "path", "value"],
+
+      "LPUSH": ["key", "value"],
+      "RPUSH": ["key", "value"],
+      "LPOP": ["key"],
+      "RPOP": ["key"],
+      "LLEN": ["key"],
+      "LRANGE": ["key", "start", "stop"],
+
+      "SADD": ["key", "value"],
+      "SMEMBERS": ["key"],
+      "SREM": ["key", "value"],
+      "SISMEMBER": ["key", "value"],
+
+      "HSET": ["key", "field", "value"],
+      "HGET": ["key", "field"],
+      "HMSET": ["key", "field-value pairs"],
+      "HGETALL": ["key"],
+      "HDEL": ["key", "field"],
+      "HEXISTS": ["key", "field"],
+
+      "ZADD": ["key", "score", "value"],
+      "ZRANGE": ["key", "start", "stop"],
+      "ZRANK": ["key", "member"],
+      "ZREM": ["key", "member"],
+      "ZRANGEBYSCORE": ["key", "min", "max"],
+
+      "XADD": ["key", "id", "field-value pairs"],
+      "XREAD": ["key", "id"],
+      "XRANGE": ["key", "start", "end"],
+      "XLEN": ["key"],
+      "XGROUP": ["subcommand"],
+      "XREADGROUP": ["group", "consumer", "key"],
+      "XACK": ["key", "group", "id"],
+
+      "GEOADD": ["key", "longitude", "latitude", "member"],
+      "GEODIST": ["key", "member1", "member2", "*unit"],
+      "GEORADIUS": ["key", "longitude", "latitude", "radius", "*unit"],
+
+      "SETBIT": ["key", "offset", "value"],
+      "GETBIT": ["key", "offset"],
+      "BITCOUNT": ["key"],
+      "BITOP": ["operation", "destkey", "key..."],
+
+      "PFADD": ["key", "element"],
+      "PFMERGE": ["destkey", "sourcekeys..."],
+      "PFCOUNT": ["key"],
+
+      "TS.CREATE": ["key"],
+      "TS.ADD": ["key", "timestamp", "value"],
+      "TS.RANGE": ["key", "start", "end"],
+      "TS.GET": ["key"],
+
+      "SUBSCRIBE": ["channel"],
+      "UNSUBSCRIBE": ["channel"],
+      "PUBLISH": ["channel", "message"],
+
+      "VECTOR.SET": ["key", "vector"],
+      "VECTOR.GET": ["key"],
+      "VECTOR.SEARCH": ["key", "query"]
    };
 
    // Populate command dropdown based on category selection
@@ -188,7 +267,7 @@
 
    socket.onmessage = (event) => {
       const responseOutput = document.getElementById("responseOutput");
-      responseOutput.textContent = event.data;
+      responseOutput.innerHTML += event.data;
    };
 
    socket.onerror = (error) => {
@@ -243,6 +322,7 @@
    let multiCommands = [];  // Store commands for MULTI
 
    // Handle sending command to WebSocket
+
    document.getElementById("sendCommand").addEventListener("click", () => {
       const command = commandSelect.value;
       const responseOutput = document.getElementById("responseOutput");
@@ -256,7 +336,9 @@
             if (value) {
                commandInput += ` ${value}`;
             } else {
-               responseOutput.textContent = `Please enter all required arguments for ${command}.`;
+               // Append error log if arguments are missing
+               const timestamp = new Date().toLocaleTimeString();
+               responseOutput.innerHTML += `<p><strong>[${timestamp}] Error:</strong> Please enter all required arguments for ${command}.</p>`;
                return;
             }
          });
@@ -264,38 +346,52 @@
 
       // Handle MULTI command
       if (command === "MULTI") {
+         multiStatus = true;
          multiCommands = [];  // Clear previous MULTI commands
-         responseOutput.textContent = "Transaction started. Add commands and then execute with EXEC.";
+         const timestamp = new Date().toLocaleTimeString();
+         if (socket.readyState === WebSocket.OPEN) {
+            socket.send(commandInput);
+            const timestamp = new Date().toLocaleTimeString();
+            responseOutput.innerHTML += `<p><strong>[${timestamp}] Sent:</strong> ${commandInput}</p>`;
+         } else {
+            const timestamp = new Date().toLocaleTimeString();
+            responseOutput.innerHTML += `<p><strong>[${timestamp}] Error:</strong> WebSocket connection not established.</p>`;
+         }
+         responseOutput.innerHTML += `<p><strong>[${timestamp}] Info:</strong> Transaction started. Add commands and then execute with EXEC.</p>`;
          return;
       }
 
       if (command === "EXEC") {
-         if (multiCommands.length === 0) {
-            responseOutput.textContent = "No commands in the transaction to execute.";
-            return;
+
+         if (socket.readyState === WebSocket.OPEN && multiStatus) {
+            socket.send("EXEC");
+            const timestamp = new Date().toLocaleTimeString();
+            responseOutput.innerHTML += `<p><strong>[${timestamp}] Info:</strong> Transaction executed.</p>`;
+         }else{
+            const timestamp = new Date().toLocaleTimeString();
+            responseOutput.innerHTML += `<p><strong>[${timestamp}] Info:</strong> No Transaction Started.</p>`;
          }
-         // Send all commands in the transaction
-         const transactionCommands = multiCommands.join("\n");
-         if (socket.readyState === WebSocket.OPEN) {
-            socket.send(transactionCommands);
-            responseOutput.textContent = "Transaction executed.";
-         }
+         multiStatus = false
          multiCommands = []; // Clear after execution
          return;
       }
 
       // If not MULTI or EXEC, send the single command
+
       if (socket.readyState === WebSocket.OPEN) {
          socket.send(commandInput);
-         responseOutput.textContent = `Sent command: ${commandInput}`;
+         const timestamp = new Date().toLocaleTimeString();
+         responseOutput.innerHTML += `<p><strong>[${timestamp}] Sent:</strong> ${commandInput}</p>`;
       } else {
-         responseOutput.textContent = "WebSocket connection not established.";
+         const timestamp = new Date().toLocaleTimeString();
+         responseOutput.innerHTML += `<p><strong>[${timestamp}] Error:</strong> WebSocket connection not established.</p>`;
       }
 
       // If part of a MULTI transaction, add it to the multiCommands list
-      if (multiCommands.length > 0) {
+      if (multiStatus) {
          multiCommands.push(commandInput);
-         responseOutput.textContent = `${command} added to transaction. Add more or execute with EXEC.`;
+         const timestamp = new Date().toLocaleTimeString();
+         responseOutput.innerHTML += `<p><strong>[${timestamp}] Info:</strong> ${command} added to transaction. Add more or execute with EXEC.</p>`;
       }
    });
 </script>

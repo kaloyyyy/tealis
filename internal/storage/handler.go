@@ -905,7 +905,7 @@ func ProcessCommand(parts []string, store *Tealis, clientID string) string {
 		}
 		return fmt.Sprintf("%d %f\r\n", latest.Timestamp.Unix(), latest.Value)
 
-	case "SUBSCRIBE":
+	case "SUBSCRIBE", "SUB":
 		if len(parts) < 2 {
 			return "-ERR Missing channel name\r\n"
 		}
@@ -919,7 +919,7 @@ func ProcessCommand(parts []string, store *Tealis, clientID string) string {
 		channel := parts[1]
 		return store.Unsubscribe(clientID, channel)
 
-	case "PUBLISH":
+	case "PUBLISH", "PUB":
 		if len(parts) < 3 {
 			return "-ERR Missing channel or message\r\n"
 		}

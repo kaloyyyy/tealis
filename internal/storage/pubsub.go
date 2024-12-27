@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"net"
+	"time"
 )
 
 // Subscribe adds a client to a channel's subscriber list.
@@ -63,14 +64,18 @@ func (r *Tealis) Publish(channel, message string) string {
 }
 
 // deliverMessages sends messages from a channel to a client.
-// deliverMessages sends messages from a channel to a client.
 func (r *Tealis) deliverMessages(clientID string, msgChan chan string) {
 	log.Printf("delivering messages to %s in chan: %v", clientID, msgChan)
 	for msg := range msgChan {
 		// Check if the client is a WebSocket connection
 		if conn, ok := r.ClientConnections[clientID].(*websocket.Conn); ok {
-			// Send message to WebSocket client
+			time.Sleep(69 * time.Millisecond)
+			r.wsWriteMutex.Lock() // Ensure only one goroutine writes to WebSocket at a time
+			r.Mu.Lock()
 			err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
+			r.wsWriteMutex.Unlock()
+			r.Mu.Unlock()
+
 			if err != nil {
 				log.Printf("Error delivering message to WebSocket client %s: %v", clientID, err)
 				// Handle cleanup if needed (e.g., unsubscribe client)

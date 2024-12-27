@@ -109,7 +109,6 @@ func websocketHandler(store *storage.Tealis, w http.ResponseWriter, r *http.Requ
 		parts := protocol.ParseCommand(command)
 		response := storage.ProcessCommand(parts, store, clientID)
 
-		// Send the response back to the client
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(response)); err != nil {
 			log.Printf("WebSocket write error: %v", err)
 			break
